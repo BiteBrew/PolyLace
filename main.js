@@ -2,9 +2,10 @@
 const { app, BrowserWindow, ipcMain, nativeTheme } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
-const marked = require('marked');
+//const marked = require('marked');
 const https = require('https');
 const http = require('http');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const DATA_DIR = path.join(app.getPath('userData'), 'data');
 const HISTORY_FILE = path.join(DATA_DIR, 'chat_history.json');
@@ -79,9 +80,8 @@ function createWindow() {
     height: 600,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
-      nodeIntegration: false, // Security
-      contextIsolation: true, // Security
-      sandbox: false
+      contextIsolation: true,
+      nodeIntegration: false,
     },
   });
 
@@ -200,10 +200,7 @@ safeIpcHandle('parse-markdown', async (event, content) => {
 
 // Get System Theme
 safeIpcHandle('get-system-theme', () => {
-  return {
-    shouldUseDarkColors: nativeTheme.shouldUseDarkColors,
-    themeSource: nativeTheme.themeSource
-  };
+  return nativeTheme.shouldUseDarkColors ? 'dark' : 'light';
 });
 
 /**
@@ -456,3 +453,104 @@ safeIpcHandle('stream-local', async (event, serverAddress, model, messages) => {
     req.end();
   });
 });
+
+// Google Gemini Streaming
+safeIpcHandle('stream-google', async (event, model, messages) => {
+  try {
+    const apiKeys = await loadApiKeys();
+    const apiKey = apiKeys.google.apiKey;
+
+    if (!apiKey) {
+      throw new Error('Google API key is not set.');
+    }
+
+    console.log('Initializing Google Generative AI with model:', model);
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const generativeModel = genAI.getGenerativeModel({ model: model });
+
+    // Format the messages for Google Gemini
+    const formattedMessages = messages.map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'model',
+      content: msg.content
+    }));
+
+    console.log('Formatted messages:', JSON.stringify(formattedMessages));
+
+    // Prepare the request
+    const request = {
+      contents: formattedMessages.map(msg => ({
+        role: msg.role,
+        parts: [{ text: msg.content }]
+      }))
+    };
+
+    console.log('Sending request to Google API:', JSON.stringify(request));
+
+    const result = await generativeModel.generateContentStream(request);
+
+    for await (const chunk of result.stream) {
+      console.log('Emitting google-stream chunk:', chunk.text());
+      event.sender.send('google-stream', chunk.text());
+    }
+
+    console.log('Emitting google-stream [DONE]');
+    event.sender.send('google-stream', '[DONE]');
+  } catch (error) {
+    console.error('Error in stream-google:', error);
+    event.sender.send('google-stream', JSON.stringify({ error: error.message }));
+  }
+});
+
+function setupGoogleStreamListener() {
+  // This function should be called within streamGoogle after creating the stream
+  // Example:
+  mainWindow.webContents.on('google-stream', (chunk) => {
+    mainWindow.webContents.send('google-stream', chunk);
+  });
+}
+
+// Expose `streamGoogle` via window.api in preload.js
+
+function notifyRendererOfThemeChange() {
+  mainWindow.webContents.send('theme-updated');
+}
+
+async function streamLocal(serverAddress, model, messages) {
+  try {
+    // Implement your local model API call here
+    // This is just a placeholder example
+    const response = await fetch(`${serverAddress}/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ model, messages }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      
+      const chunk = decoder.decode(value);
+      mainWindow.webContents.send('local-stream', chunk);
+    }
+
+    mainWindow.webContents.send('local-stream', JSON.stringify({ done: true }));
+  } catch (error) {
+    console.error('Error in streamLocal:', error);
+    mainWindow.webContents.send('local-stream', JSON.stringify({ error: error.message }));
+  }
+}
+
+// Make sure to export the function
+module.exports = {
+  streamGoogle,
+  // ... other exported functions ...
+};

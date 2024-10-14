@@ -1,35 +1,32 @@
-const { contextBridge, ipcRenderer, shell } = require('electron');
-const { marked } = require('marked');
+const { contextBridge, ipcRenderer } = require('electron');
+//const { marked } = require('marked');
 
-// Configure marked to address the warnings
-marked.use({
-  mangle: false,
-  headerIds: false
-});
+//marked.use({
+//  mangle: false,
+//  headerIds: false
+//})
 
 contextBridge.exposeInMainWorld('api', {
-  loadChatHistory: () => ipcRenderer.invoke('load-chat-history'),
-  saveChatHistory: (messages) => ipcRenderer.invoke('save-chat-history', messages),
-  loadConfig: () => ipcRenderer.invoke('load-config'),
-  saveConfig: (config) => ipcRenderer.invoke('save-config', config),
-  loadSystemPrompt: () => ipcRenderer.invoke('load-system-prompt'),
-  saveSystemPrompt: (prompt) => ipcRenderer.invoke('save-system-prompt', prompt),
   loadApiKeys: () => ipcRenderer.invoke('load-api-keys'),
-  saveApiKeys: (apiKeys) => ipcRenderer.invoke('save-api-keys', apiKeys),
-  parseMarkdown: (content) => marked.parse(content),
-  // Streaming Handlers
+  saveApiKeys: (keys) => ipcRenderer.invoke('save-api-keys', keys),
+  loadChatHistory: () => ipcRenderer.invoke('load-chat-history'),
+  saveChatHistory: (history) => ipcRenderer.invoke('save-chat-history', history),
+  loadConfig: () => ipcRenderer.invoke('load-config'),
+  loadSystemPrompt: () => ipcRenderer.invoke('load-system-prompt'),
+  loadSelectedModel: () => ipcRenderer.invoke('load-selected-model'),
+  saveSelectedModel: (model) => ipcRenderer.invoke('save-selected-model', model),
+  getSystemTheme: () => ipcRenderer.invoke('get-system-theme'),
+  parseMarkdown: (content) => ipcRenderer.invoke('parse-markdown', content),
   streamOpenAI: (model, messages) => ipcRenderer.invoke('stream-openai', model, messages),
   streamAnthropic: (model, messages) => ipcRenderer.invoke('stream-anthropic', model, messages),
   streamGroq: (model, messages) => ipcRenderer.invoke('stream-groq', model, messages),
   streamLocal: (serverAddress, model, messages) => ipcRenderer.invoke('stream-local', serverAddress, model, messages),
-  getSystemTheme: () => ipcRenderer.invoke('get-system-theme'),
-  openExternal: (url) => shell.openExternal(url),
-  makeLocalRequest: (url, data) => ipcRenderer.invoke('make-local-request', url, data),
-  onThemeUpdated: (callback) => ipcRenderer.on('system-theme-updated', callback),
-  loadSelectedModel: () => ipcRenderer.invoke('load-selected-model'),
-  saveSelectedModel: (selectedModel) => ipcRenderer.invoke('save-selected-model', selectedModel),
-  onOpenAIStream: (callback) => ipcRenderer.on('openai-stream', callback),
-  onAnthropicStream: (callback) => ipcRenderer.on('anthropic-stream', callback),
-  onGroqStream: (callback) => ipcRenderer.on('groq-stream', callback),
-  onLocalStream: (callback) => ipcRenderer.on('local-stream', callback),
+  streamGoogle: (model, messages) => ipcRenderer.invoke('stream-google', model, messages),
+  on: (channel, func) => {
+    const validChannels = ['openai-stream', 'anthropic-stream', 'groq-stream', 'local-stream', 'google-stream', 'theme-updated'];
+    if (validChannels.includes(channel)) {
+      ipcRenderer.on(channel, (event, ...args) => func(...args));
+    }
+  },
+  // Add any other methods you need
 });
