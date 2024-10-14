@@ -1,7 +1,5 @@
 # PolyLace
 
-![PolyLace Logo](assets/PolyLace.png)
-
 PolyLace is an Electron-based application designed to weave conversations across multiple AI models. Whether you're leveraging OpenAI, Anthropic, Groq AI, or local models, PolyLace provides a unified interface to interact with your preferred AI systems seamlessly.
 
 ## Table of Contents
@@ -122,3 +120,4 @@ PolyLace uses a combination of JSON and YAML configuration files to manage setti
 
 Customize the AI's persona by editing the `system_prompt.txt` file located in the `data` directory.
 
+![PolyLace Logo](assets/PolyLace.png)
