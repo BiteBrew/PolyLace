@@ -1,5 +1,8 @@
 // renderer.js
 
+// At the top of the file, add this line
+console.log('Renderer script loaded');
+
 // ... existing imports and code ...
 
 let apiKeys = {};
@@ -10,6 +13,11 @@ let selectedModel = 'openai:gpt-3.5-turbo'; // Default model
 let openAIBuffer = '';
 let buffer = '';
 let lastResponse = '';
+
+// At the top of the file, add these variables if they don't exist
+let streamingContent = '';
+let currentStreamingMessage = null;
+let lastDisplayedContent = '';
 
 // DOM Elements
 const chatDisplay = document.getElementById('chat-display');
@@ -23,6 +31,8 @@ const closeButton = document.querySelector('.close-button');
 
 // Initialize Application
 window.addEventListener('DOMContentLoaded', async () => {
+  console.log('DOM fully loaded and parsed');
+  checkChatDisplay();
   await applySystemTheme();
   await loadApiKeys();
   await loadChatHistory();
@@ -277,7 +287,9 @@ function setupStreamListeners() {
     handleStreamingResponse('AI', chunk, 'local');
   });
 
+  // Replace the existing Google stream listener with this:
   window.api.on('google-stream', (chunk) => {
+    console.log('Received chunk in renderer:', chunk);
     handleStreamingResponse('AI', chunk, 'google');
   });
 }
@@ -286,16 +298,20 @@ function setupStreamListeners() {
 setupStreamListeners();
 
 // Function to handle streaming responses
-let currentStreamingMessage = null;
-let streamingContent = '';
-let lastDisplayedContent = '';
-
 async function handleStreamingResponse(sender, chunk, provider) {
-  console.log(`Received chunk from ${provider}:`, chunk);
+  console.log(`Handling streaming response from ${provider}:`, chunk);
   try {
     let newContent = '';
+    let isDone = false;
 
-    if (provider === 'local') {
+    if (provider === 'google') {
+      if (chunk === '[DONE]') {
+        isDone = true;
+      } else if (chunk !== undefined && chunk !== null) {
+        newContent = chunk;
+        isDone = true; // For Google, we're getting the full response at once
+      }
+    } else if (provider === 'local') {
       try {
         const data = JSON.parse(chunk);
         if (data.message && data.message.content) {
@@ -311,34 +327,39 @@ async function handleStreamingResponse(sender, chunk, provider) {
         newContent = chunk;
       }
     } else {
-      // Handle other providers (openai, anthropic, groq, google)
-      const lines = chunk.split('\n');
-      lines.forEach(line => {
-        if (line.startsWith('data: ')) {
-          const jsonString = line.slice(5).trim();
-          if (jsonString && jsonString !== '[DONE]') {
-            try {
-              const jsonData = JSON.parse(jsonString);
-              if (provider === 'anthropic' && jsonData.type === 'content_block_delta') {
-                newContent += jsonData.delta.text || '';
-              } else if ((provider === 'openai' || provider === 'groq' || provider === 'google') && 
-                         jsonData.choices && jsonData.choices[0] && jsonData.choices[0].delta) {
-                newContent += jsonData.choices[0].delta.content || '';
+      // Handle other providers (openai, anthropic, groq)
+      if (typeof chunk === 'string') {
+        const lines = chunk.split('\n');
+        lines.forEach(line => {
+          if (line.startsWith('data: ')) {
+            const jsonString = line.slice(5).trim();
+            if (jsonString && jsonString !== '[DONE]') {
+              try {
+                const jsonData = JSON.parse(jsonString);
+                if (provider === 'anthropic' && jsonData.type === 'content_block_delta') {
+                  newContent += jsonData.delta.text || '';
+                } else if ((provider === 'openai' || provider === 'groq') && 
+                           jsonData.choices && jsonData.choices[0] && jsonData.choices[0].delta) {
+                  newContent += jsonData.choices[0].delta.content || '';
+                }
+              } catch (e) {
+                console.warn('Error parsing JSON:', e, 'Raw data:', jsonString);
               }
-            } catch (e) {
-              console.warn('Error parsing JSON:', e, 'Raw data:', jsonString);
             }
           }
-        }
-      });
+        });
+        isDone = chunk.includes('"finish_reason":"stop"') || chunk.includes('"type":"message_stop"');
+      }
     }
 
     if (newContent) {
+      console.log('New content received:', newContent);
       streamingContent += newContent;
       await updateDisplayIfNeeded();
     }
 
-    if (provider !== 'local' && (chunk.includes('"finish_reason":"stop"') || chunk.includes('"type":"message_stop"') || chunk.includes('[DONE]'))) {
+    if (isDone) {
+      console.log('Stream is done, finalizing message');
       await finalizeMessage();
     }
 
@@ -350,11 +371,13 @@ async function handleStreamingResponse(sender, chunk, provider) {
 }
 
 async function updateDisplayIfNeeded() {
-  // Update more frequently for local model
+  console.log('Updating display. Current streaming content:', streamingContent);
   if (streamingContent.length - lastDisplayedContent.length > 0) {
     if (!currentStreamingMessage) {
+      console.log('Creating new message element');
       currentStreamingMessage = await displayMessage('AI', streamingContent);
     } else {
+      console.log('Updating existing message element');
       await updateMessageContent(currentStreamingMessage, streamingContent);
     }
     lastDisplayedContent = streamingContent;
@@ -362,6 +385,7 @@ async function updateDisplayIfNeeded() {
 }
 
 async function finalizeMessage() {
+  console.log('Finalizing message');
   if (currentStreamingMessage) {
     await updateMessageContent(currentStreamingMessage, streamingContent);
     const aiMessage = { role: 'assistant', content: streamingContent.trim() };
@@ -372,6 +396,7 @@ async function finalizeMessage() {
 }
 
 function resetStreamingState() {
+  console.log('Resetting streaming state');
   currentStreamingMessage = null;
   streamingContent = '';
   lastDisplayedContent = '';
@@ -398,20 +423,24 @@ async function renderChat() {
 
 // Display Message
 async function displayMessage(sender, content) {
-  return new Promise((resolve) => {
-    const messageElement = document.createElement('div');
-    messageElement.className = `message ${sender.toLowerCase()}-message`;
-    
-    const contentElement = document.createElement('div');
-    contentElement.className = 'message-content';
-    contentElement.textContent = content;
-    
-    messageElement.appendChild(contentElement);
-    
-    chatDisplay.appendChild(messageElement);
-    scrollToBottom();
-    resolve(messageElement);
-  });
+  console.log(`Displaying message from ${sender}:`, content);
+  if (!chatDisplay) {
+    console.error('chatDisplay is not defined!');
+    return null;
+  }
+  const messageElement = document.createElement('div');
+  messageElement.className = `message ${sender.toLowerCase()}-message`;
+  
+  const contentElement = document.createElement('div');
+  contentElement.className = 'message-content';
+  contentElement.textContent = content;
+  
+  messageElement.appendChild(contentElement);
+  
+  chatDisplay.appendChild(messageElement);
+  console.log('Message element added to chatDisplay');
+  scrollToBottom();
+  return messageElement;
 }
 
 // Function to copy AI message content
@@ -556,8 +585,18 @@ function createMessageElement(message, isAi) {
 function scrollToBottom() {
   if (chatDisplay) {
     chatDisplay.scrollTop = chatDisplay.scrollHeight;
+    console.log('Scrolled to bottom');
   } else {
-    console.warn('chatDisplay not found');
+    console.warn('chatDisplay not found, unable to scroll');
+  }
+}
+
+// Add this function to check if the chatDisplay element exists
+function checkChatDisplay() {
+  if (chatDisplay) {
+    console.log('chatDisplay found:', chatDisplay);
+  } else {
+    console.error('chatDisplay not found!');
   }
 }
 

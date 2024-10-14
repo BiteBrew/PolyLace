@@ -1,4 +1,10 @@
 const { contextBridge, ipcRenderer } = require('electron');
+//const { marked } = require('marked');
+
+//marked.use({
+//  mangle: false,
+//  headerIds: false
+//})
 
 contextBridge.exposeInMainWorld('api', {
   loadApiKeys: () => ipcRenderer.invoke('load-api-keys'),
