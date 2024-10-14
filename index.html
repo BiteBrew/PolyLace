@@ -1,0 +1,93 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Ada Chat</title>
+  <link rel="stylesheet" href="styles.css">
+  <!-- Include Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/default.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+  <!-- Include common languages -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/go.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/css.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/json.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/xml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/markdown.min.js"></script>
+  <!-- Add more languages as needed -->
+</head>
+<body>
+  <div class="container">
+    <!-- Controls -->
+    <div class="controls">
+      <select id="model-selector">
+        <!-- Options will be dynamically populated -->
+      </select>
+      <div class="right-controls">
+        <button id="clear-button">Clear Conversation</button>
+        <button id="options-button"><i class="fas fa-cog"></i></button>
+      </div>
+    </div>
+
+    <!-- Chat Display -->
+    <div id="chat-display" class="chat-display"></div>
+    <input type="text" id="input-field" placeholder="Type your message here...">
+  </div>
+
+  <!-- Options Modal -->
+  <div id="options-modal" class="modal">
+    <div class="modal-content">
+      <span class="close-button">&times;</span>
+      <h2>Options</h2>
+      <form id="options-form">
+        <!-- Existing Options -->
+
+        <h3>API Keys Management</h3>
+
+        <div class="api-section" id="openai-section">
+          <h4>OpenAI</h4>
+          <label for="openai-api-key">API Key:</label>
+          <input type="password" id="openai-api-key" placeholder="Enter OpenAI API Key">
+          <label for="openai-models">Models:</label>
+          <input type="text" id="openai-models" placeholder="Comma-separated model names">
+        </div>
+
+        <div class="api-section" id="anthropic-section">
+          <h4>Anthropic</h4>
+          <label for="anthropic-api-key">API Key:</label>
+          <input type="password" id="anthropic-api-key" placeholder="Enter Anthropic API Key">
+          <label for="anthropic-models">Models:</label>
+          <input type="text" id="anthropic-models" placeholder="Comma-separated model names">
+        </div>
+
+        <div class="api-section" id="groq-section">
+          <h4>Groq AI</h4>
+          <label for="groq-api-key">API Key:</label>
+          <input type="password" id="groq-api-key" placeholder="Enter Groq AI API Key">
+          <label for="groq-models">Models:</label>
+          <input type="text" id="groq-models" placeholder="Comma-separated model names">
+        </div>
+
+        <div class="api-section" id="local-section">
+          <h4>Local Models (Ollama)</h4>
+          <label for="local-server-address">Server Address:</label>
+          <input type="text" id="local-server-address" value="http://localhost:11434/api/chat" readonly style="background-color: #f0f0f0;">
+          <label for="local-models">Models:</label>
+          <input type="text" id="local-models" placeholder="Comma-separated model names">
+          <small>Local models are managed separately.</small>
+        </div>
+
+        <button type="submit">Save</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+# Ignore the entire dist directory
+dist/
+
+# Ignore the entire node_modules directory
+node_modules/
+
+# Ignore specific file types that might be large
+*.exe
+*.deb
+*.AppImage
+
+# Ignore any other large files that might be in unexpected locations
+**/*.exe
+**/*.deb
+**/*.AppImage
+
+# Ignore log files
+*.log
+
+# Ignore OS generated files
+.DS_Store
+Thumbs.db
+
+# Explicitly ignore the problematic files
+dist/Polylace Setup 0.1.0.exe
+dist/polylace_0.1.0_amd64.deb
+dist/Ada Setup 0.1.0.exe
+node_modules/electron/dist/electron
+dist/Polylace-0.1.0.AppImage
+dist/win-unpacked/Polylace.exe
+dist/Ada-1.0.0.AppImage

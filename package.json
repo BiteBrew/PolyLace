@@ -1,0 +1,68 @@
+{
+  "name": "polylace",
+  "version": "0.1.0",
+  "description": "Weaving conversations across models",
+  "main": "main.js",
+  "homepage": "https://github.com/BiteBrew/PolyLace",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder build --win --mac --linux",
+    "build:win": "electron-builder build --win",
+    "build:mac": "electron-builder build --mac",
+    "build:linux": "electron-builder build --linux"
+  },
+  "author": {
+    "name": "Cyber Sage",
+    "email": "Kristopherr@gmx.com"
+  },
+  "license": "GNU GENERAL PUBLIC LICENSE",
+  "devDependencies": {
+    "electron": "^32.1.2",
+    "electron-builder": "^25.0.5"
+  },
+  "dependencies": {
+    "axios": "^1.7.7",
+    "highlight.js": "^11.10.0",
+    "marked": "^5.1.2"
+  },
+  "build": {
+    "appId": "com.bitebrew.polylace",
+    "productName": "Polylace",
+    "files": [
+      "**/*",
+      "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
+      "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
+      "!**/node_modules/*.d.ts",
+      "!**/node_modules/.bin",
+      "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}",
+      "!.editorconfig",
+      "!**/._*",
+      "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.gitignore,.gitattributes}",
+      "!**/{__pycache__,thumbs.db,.flowconfig,.idea,.vs,.nyc_output}",
+      "!**/{appveyor.yml,.travis.yml,circle.yml}",
+      "!**/{npm-debug.log,yarn.lock,.yarn-integrity,.yarn-metadata.json}"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "assets/PolyLace.png"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "assets/PolyLace.png"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Utility",
+      "maintainer": "Cyber Sage <kristopherr@gmx.com>",
+      "icon": "assets/PolyLace.png"
+    }
+  }
+}
