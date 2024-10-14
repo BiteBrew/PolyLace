@@ -412,6 +412,14 @@ function displayMessage(sender, content) {
   contentElement.className = 'message-content';
   messageElement.appendChild(contentElement);
   
+  if (sender.toLowerCase() === 'ai') {
+    const copyButton = document.createElement('button');
+    copyButton.className = 'ai-message-copy-button';
+    copyButton.textContent = 'Copy';
+    copyButton.onclick = () => copyAiMessage(messageElement);
+    messageElement.appendChild(copyButton);
+  }
+  
   updateMessageContent(messageElement, content);
   
   chatDisplay.appendChild(messageElement);
@@ -446,106 +454,40 @@ function copyAiMessage(messageElement) {
 
 // Function to add code block features (syntax highlighting and copy button)
 function addCodeBlockFeatures(element) {
-  const codeBlocks = element.querySelectorAll('pre code, code');
+  const codeBlocks = element.querySelectorAll('pre code');
   
-  codeBlocks.forEach((block, index) => {
-    try {
-      let pre = block.parentNode;
-      if (block.tagName.toLowerCase() === 'code' && pre.tagName.toLowerCase() !== 'pre') {
-        // If it's a standalone <code> element, wrap it in a <pre>
-        pre = document.createElement('pre');
-        block.parentNode.insertBefore(pre, block);
-        pre.appendChild(block);
-      }
+  codeBlocks.forEach((block) => {
+    let pre = block.parentNode;
+    
+    // Escape HTML content in the code block
+    block.textContent = block.innerHTML;
+    
+    // Create header if it doesn't exist
+    if (!pre.previousElementSibling || !pre.previousElementSibling.classList.contains('code-block-header')) {
+      const header = document.createElement('div');
+      header.className = 'code-block-header';
+      header.innerHTML = `
+        <span>${block.className.replace('language-', '') || 'plaintext'}</span>
+        <button class="copy-button">Copy</button>
+      `;
       
-      if (!pre) {
-        console.warn('Code block has no parent element:', block);
-        return;
-      }
+      // Insert header before pre
+      pre.parentNode.insertBefore(header, pre);
       
-      // Detect language from class or default to plaintext
-      let language = 'plaintext';
-      const classes = block.className.split(' ');
-      for (const cls of classes) {
-        if (cls.startsWith('language-')) {
-          language = cls.slice(9);
-          break;
-        }
-      }
-      
-      // Ensure the code content is a string and not empty
-      let codeContent = typeof block.textContent === 'string' ? block.textContent : String(block.textContent);
-      codeContent = codeContent.trim();
-      
-      if (codeContent === '') {
-        console.warn('Empty code block found:', block);
-        return;
-      }
-      
-      // Escape HTML to prevent security risks
-      const escapedCode = codeContent
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-      
-      block.innerHTML = escapedCode;
-      
-      // Create header if it doesn't exist
-      if (!pre.previousElementSibling || !pre.previousElementSibling.classList.contains('code-block-header')) {
-        const header = document.createElement('div');
-        header.className = 'code-block-header';
-        header.innerHTML = `
-          <span>${language || 'plaintext'}</span>
-          <button class="copy-button">Copy</button>
-        `;
-        
-        // Insert header before pre
-        if (pre.parentNode) {
-          pre.parentNode.insertBefore(header, pre);
-        } else {
-          console.warn('Cannot insert header: pre element has no parent', pre);
-          // Attempt to wrap the pre in a div and add the header
-          const wrapper = document.createElement('div');
-          wrapper.appendChild(header);
-          pre.parentNode?.insertBefore(wrapper, pre);
-          wrapper.appendChild(pre);
-        }
-        
-        // Add copy functionality
-        const copyButton = header.querySelector('.copy-button');
-        copyButton.addEventListener('click', () => {
-          navigator.clipboard.writeText(codeContent).then(() => {
-            copyButton.textContent = 'Copied!';
-            copyButton.classList.add('copied');
-            copyButton.disabled = true;
-            setTimeout(() => {
-              copyButton.textContent = 'Copy';
-              copyButton.classList.remove('copied');
-              copyButton.disabled = false;
-            }, 2000);
-          });
+      // Add copy functionality
+      const copyButton = header.querySelector('.copy-button');
+      copyButton.addEventListener('click', () => {
+        navigator.clipboard.writeText(block.textContent).then(() => {
+          copyButton.textContent = 'Copied!';
+          setTimeout(() => {
+            copyButton.textContent = 'Copy';
+          }, 2000);
         });
-      }
-      
-      // Apply syntax highlighting
-      try {
-        if (language && language !== 'plaintext' && hljs.getLanguage(language)) {
-          hljs.highlightElement(block);
-        } else {
-          console.warn(`Language '${language}' not found or is plaintext, falling back to auto-detection.`);
-          const result = hljs.highlightAuto(codeContent);
-          block.innerHTML = result.value;
-          block.className = `hljs ${result.language}`;
-        }
-      } catch (highlightError) {
-        console.warn('Error applying syntax highlighting:', highlightError);
-        console.log('Problematic code content:', codeContent);
-      }
-    } catch (error) {
-      console.error('Error adding code block features:', error);
+      });
     }
+    
+    // Apply syntax highlighting
+    hljs.highlightElement(block);
   });
 }
 
@@ -576,14 +518,15 @@ function updateMessageContent(messageElement, content) {
   if (messageElement && content) {
     let contentElement = messageElement.querySelector('.message-content');
     if (!contentElement) {
+      console.warn('Content element not found, creating new one');
       contentElement = document.createElement('div');
       contentElement.className = 'message-content';
-      messageElement.appendChild(contentElement);
+      messageElement.insertBefore(contentElement, messageElement.lastChild);
     }
     const parsedContent = window.api.parseMarkdown(content);
     if (parsedContent.trim() !== '') {
       contentElement.innerHTML = parsedContent;
-      addCodeBlockFeatures(messageElement);
+      addCodeBlockFeatures(contentElement);
     } else {
       console.warn('Parsed content is empty');
     }
@@ -599,7 +542,6 @@ function createMessageElement(message, isAi) {
   const messageElement = document.createElement('div');
   messageElement.classList.add('message', isAi ? 'ai-message' : 'user-message');
   
-  // Create the message content
   const contentElement = document.createElement('div');
   contentElement.classList.add('message-content');
   contentElement.innerHTML = message;
@@ -607,7 +549,6 @@ function createMessageElement(message, isAi) {
   messageElement.appendChild(contentElement);
 
   if (isAi) {
-    // Create and add the copy button for AI messages
     const copyButton = document.createElement('button');
     copyButton.classList.add('ai-message-copy-button');
     copyButton.textContent = 'Copy';
@@ -618,3 +559,13 @@ function createMessageElement(message, isAi) {
 
   return messageElement;
 }
+
+function scrollToBottom() {
+  const chatDisplay = document.getElementById('chat-display');
+  chatDisplay.scrollTop = chatDisplay.scrollHeight;
+}
+
+// Call this function whenever a new message is added to the chat
+// For example:
+// addMessageToChat(message);
+// scrollToBottom();
