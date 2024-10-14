@@ -456,3 +456,56 @@ safeIpcHandle('stream-local', async (event, serverAddress, model, messages) => {
     req.end();
   });
 });
+
+// Google Gemini Streaming
+safeIpcHandle('stream-google', async (event, model, messages) => {
+  await streamGoogle(model, messages);
+});
+
+function setupGoogleStreamListener() {
+  // This function should be called within streamGoogle after creating the stream
+  // Example:
+  mainWindow.webContents.on('google-stream', (chunk) => {
+    mainWindow.webContents.send('google-stream', chunk);
+  });
+}
+
+// Expose `streamGoogle` via window.api in preload.js
+
+function notifyRendererOfThemeChange() {
+  mainWindow.webContents.send('theme-updated');
+}
+
+async function streamLocal(serverAddress, model, messages) {
+  try {
+    // Implement your local model API call here
+    // This is just a placeholder example
+    const response = await fetch(`${serverAddress}/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ model, messages }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      
+      const chunk = decoder.decode(value);
+      mainWindow.webContents.send('local-stream', chunk);
+    }
+
+    mainWindow.webContents.send('local-stream', JSON.stringify({ done: true }));
+  } catch (error) {
+    console.error('Error in streamLocal:', error);
+    mainWindow.webContents.send('local-stream', JSON.stringify({ error: error.message }));
+  }
+}
