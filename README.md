@@ -91,7 +91,7 @@ PolyLace uses a combination of JSON and YAML configuration files to manage setti
   
   ```json
   {
-    "context_window_size": 10
+    "context_window_size": 25
   }
   ```
 
@@ -120,5 +120,5 @@ PolyLace uses a combination of JSON and YAML configuration files to manage setti
 
 ### System Prompt
 
-Customize the AI's persona by editing the `system_prompt.txt` file located
+Customize the AI's persona by editing the `system_prompt.txt` file located in the `data` directory.
 
