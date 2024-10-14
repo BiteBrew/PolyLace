@@ -548,9 +548,3 @@ async function streamLocal(serverAddress, model, messages) {
     mainWindow.webContents.send('local-stream', JSON.stringify({ error: error.message }));
   }
 }
-
-// Make sure to export the function
-module.exports = {
-  streamGoogle,
-  // ... other exported functions ...
-};
