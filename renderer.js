@@ -18,6 +18,7 @@ let lastResponse = '';
 let streamingContent = '';
 let currentStreamingMessage = null;
 let lastDisplayedContent = '';
+let groqBuffer = '';
 
 // DOM Elements
 const chatDisplay = document.getElementById('chat-display');
@@ -267,6 +268,13 @@ async function sendMessage() {
       currentStreamingMessage = null;
     }
   }
+
+  if (selectedModel.startsWith('google:')) {
+    resetStreamingState();
+    streamingContent = '';
+    currentStreamingMessage = null;
+    lastDisplayedContent = '';
+  }
 }
 
 // Handle streaming data from providers
@@ -289,7 +297,7 @@ function setupStreamListeners() {
 
   // Replace the existing Google stream listener with this:
   window.api.on('google-stream', (chunk) => {
-    console.log('Received chunk in renderer:', chunk);
+    console.log('Received google-stream chunk in renderer:', chunk);
     handleStreamingResponse('AI', chunk, 'google');
   });
 }
@@ -305,12 +313,46 @@ async function handleStreamingResponse(sender, chunk, provider) {
     let isDone = false;
 
     if (provider === 'google') {
+      console.log('Processing Google chunk:', chunk);
       if (chunk === '[DONE]') {
+        console.log('Google stream completed');
         isDone = true;
       } else if (chunk !== undefined && chunk !== null) {
+        console.log('Adding new content from Google:', chunk);
         newContent = chunk;
-        isDone = true; // For Google, we're getting the full response at once
       }
+    } else if (provider === 'groq') {
+      // Accumulate chunks in the buffer
+      groqBuffer += chunk;
+      
+      // Process complete JSON objects
+      let startIndex = 0;
+      while (true) {
+        const endIndex = groqBuffer.indexOf('\n', startIndex);
+        if (endIndex === -1) break;
+        
+        const line = groqBuffer.slice(startIndex, endIndex).trim();
+        startIndex = endIndex + 1;
+        
+        if (line.startsWith('data: ')) {
+          const jsonString = line.slice(5).trim();
+          if (jsonString === '[DONE]') {
+            isDone = true;
+            break;
+          }
+          try {
+            const jsonData = JSON.parse(jsonString);
+            if (jsonData.choices && jsonData.choices[0] && jsonData.choices[0].delta) {
+              newContent += jsonData.choices[0].delta.content || '';
+            }
+          } catch (e) {
+            console.warn('Error parsing Groq JSON:', e, 'Raw data:', jsonString);
+          }
+        }
+      }
+      
+      // Remove processed data from the buffer
+      groqBuffer = groqBuffer.slice(startIndex);
     } else if (provider === 'local') {
       try {
         const data = JSON.parse(chunk);
@@ -327,7 +369,7 @@ async function handleStreamingResponse(sender, chunk, provider) {
         newContent = chunk;
       }
     } else {
-      // Handle other providers (openai, anthropic, groq)
+      // Handle other providers (openai, anthropic)
       if (typeof chunk === 'string') {
         const lines = chunk.split('\n');
         lines.forEach(line => {
@@ -372,7 +414,7 @@ async function handleStreamingResponse(sender, chunk, provider) {
 
 async function updateDisplayIfNeeded() {
   console.log('Updating display. Current streaming content:', streamingContent);
-  if (streamingContent.length - lastDisplayedContent.length > 0) {
+  if (streamingContent.length > lastDisplayedContent.length) {
     if (!currentStreamingMessage) {
       console.log('Creating new message element');
       currentStreamingMessage = await displayMessage('AI', streamingContent);
@@ -381,6 +423,7 @@ async function updateDisplayIfNeeded() {
       await updateMessageContent(currentStreamingMessage, streamingContent);
     }
     lastDisplayedContent = streamingContent;
+    scrollToBottom();
   }
 }
 
@@ -400,6 +443,7 @@ function resetStreamingState() {
   currentStreamingMessage = null;
   streamingContent = '';
   lastDisplayedContent = '';
+  groqBuffer = ''; // Reset the Groq buffer
 }
 
 // Function to display error messages
