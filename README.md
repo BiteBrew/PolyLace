@@ -16,7 +16,7 @@ To install the default models run the following commands in your terminal:
 ollama pull llama3.2
 ollama pull llama3.2:1b
 ```
-Other installable models can be found [here](https://docs.ollama.com/library).
+Other installable models can be found [here](https://ollama.com/library).
 
 To start the ollama server run the following command in your terminal usually this will already be running in the background:
 
@@ -42,15 +42,14 @@ See their available models [here](https://docs.anthropic.com/claude-3-opus/refer
 
 Get an Groq API key (free key available) [here](https://console.groq.com/keys).
 
-See their available models [here](https://docs.groq.com/api/models).
+See their available models [here](https://docs.groq.com/docs/models).
 
 Get a Google API key (free key available) [here](https://console.cloud.google.com/apis/credentials).
 
-See their available models [here](https://ai.google.dev/gemini-api/docs/models).
+See their available models [here](https://ai.google.dev/gemini-api/docs/models/gemini).
 
 ## Table of Contents
 
-- [Overview](#overview)
 - [Features](#features)
 - [Installation](#installation)
 - [Usage](#usage)
