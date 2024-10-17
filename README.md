@@ -1,6 +1,8 @@
-# PolyLace
+# PolyLace -- Weaving Conversations Across Models
 
 PolyLace is an Electron-based application designed to weave conversations across multiple AI models. Whether you're leveraging OpenAI, Anthropic, Groq AI, or local models, PolyLace provides a unified interface to interact with your preferred AI systems seamlessly.
+
+Local models are supported by Ollama. It is recommend you download Ollama and any models you want to use from [ollama.com](https://ollama.com/).
 
 ## Table of Contents
 

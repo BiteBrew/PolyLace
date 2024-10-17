@@ -83,6 +83,7 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
     },
+    icon: path.join(__dirname, 'assets', 'PolyLace.png')
   });
 
   win.setMenu(null); // Remove the default menu
