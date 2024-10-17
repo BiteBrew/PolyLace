@@ -1,7 +1,7 @@
 // renderer.js
 import { setupEventListeners } from './eventHandlers.js';
 import { renderChat, displayMessage, updateMessageContent } from './chatRenderer.js';
-import { loadApiKeys, loadChatHistory, loadConfig, loadSystemPrompt, loadSelectedModel, applySystemTheme } from './dataLoader.js';
+import { loadApiKeys, loadChatHistory, loadConfig, loadSystemPrompt, loadSelectedModel } from './dataLoader.js';
 import { handleStreamingResponse } from './streamHandler.js';
 import { populateModelSelector } from './uiUpdater.js';
 
@@ -34,6 +34,23 @@ function setupStreamingListeners() {
   window.api.on('google-stream', (chunk) => handleStreamingResponse('Google', chunk, 'google'));
 }
 
+async function applySystemTheme() {
+  try {
+    const theme = await window.api.getSystemTheme();
+    document.body.setAttribute('data-theme', theme);
+  } catch (error) {
+    console.error('Error applying system theme:', error);
+  }
+}
+
+function handleLinkClicks(event) {
+  const target = event.target.closest('a');
+  if (target && target.href) {
+    event.preventDefault();
+    window.api.openExternalLink(target.href);
+  }
+}
+
 // Update the DOMContentLoaded event listener
 window.addEventListener('DOMContentLoaded', async () => {
   console.log('DOM fully loaded and parsed');
@@ -48,6 +65,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   renderChat();
   setupEventListeners();
   setupStreamingListeners(); // Add this line
+
+  // Add event listener for link clicks
+  document.addEventListener('click', handleLinkClicks);
+
+  // Listen for theme changes
+  window.api.onThemeUpdated((theme) => {
+    document.body.setAttribute('data-theme', theme);
+  });
 });
 
 function checkChatDisplay() {

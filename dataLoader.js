@@ -24,6 +24,10 @@ export async function loadApiKeys() {
   }
   
   export async function applySystemTheme() {
-    const theme = await window.api.getSystemTheme();
-    document.body.classList.toggle('dark-mode', theme.shouldUseDarkColors);
+    try {
+      const theme = await window.api.getSystemTheme();
+      document.body.setAttribute('data-theme', theme);
+    } catch (error) {
+      console.error('Error applying system theme:', error);
+    }
   }

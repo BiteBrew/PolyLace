@@ -26,7 +26,12 @@ export async function displayMessage(sender, content) {
   
   const contentElement = document.createElement('div');
   contentElement.className = 'message-content';
-  contentElement.textContent = content;
+  
+  // CRITICAL: DO NOT MODIFY THE FOLLOWING SECTION
+  // This ensures that links are rendered correctly and can be intercepted
+  const parsedContent = await window.api.parseMarkdown(content);
+  contentElement.innerHTML = parsedContent;
+  // END OF CRITICAL SECTION
   
   messageElement.appendChild(contentElement);
   
@@ -47,12 +52,12 @@ export async function updateMessageContent(messageElementPromise, content) {
 
     const contentElement = messageElement.querySelector('.message-content');
     if (contentElement) {
-      contentElement.textContent = content;
+      contentElement.innerHTML = await window.api.parseMarkdown(content);
     } else {
       console.warn('Content element not found in message, creating new one');
       const newContentElement = document.createElement('div');
       newContentElement.className = 'message-content';
-      newContentElement.textContent = content;
+      newContentElement.innerHTML = await window.api.parseMarkdown(content);
       messageElement.appendChild(newContentElement);
     }
     scrollToBottom();
