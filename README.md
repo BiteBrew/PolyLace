@@ -1,8 +1,6 @@
 # PolyLace -- Weaving Conversations Across Models
 
-PolyLace is an Electron-based application designed to weave conversations across multiple AI models. Whether you're leveraging OpenAI, Anthropic, Groq AI, or local models, PolyLace provides a unified interface to interact with your preferred AI systems seamlessly.
-
-Local models are supported by Ollama. It is recommend you download Ollama and any models you want to use from [ollama.com](https://ollama.com/).
+PolyLace is an cross-platform Electron-based application designed to weave conversations across multiple AI models. Whether you're leveraging OpenAI, Anthropic, Groq AI, or local models, PolyLace provides a unified interface to interact with your preferred AI systems seamlessly.
 
 ## Table of Contents
 
@@ -10,10 +8,10 @@ Local models are supported by Ollama. It is recommend you download Ollama and an
 - [Installation](#installation)
 - [Usage](#usage)
 - [Configuration](#configuration)
-- [Building the Application](#building-the-application)
-- [Contributing](#contributing)
-- [License](#license)
-- [Contact](#contact)
+- [Current Features](#current-features)
+- [Areas for Improvement](#areas-for-improvement)
+- [Conclusion](#conclusion)      
+- [Key Components](#key-components)    
 
 ## Features
 
@@ -31,6 +29,11 @@ Local models are supported by Ollama. It is recommend you download Ollama and an
 
 - **Node.js:** Ensure you have [Node.js](https://nodejs.org/) installed (version 14 or higher recommended).
 - **npm:** Node.js installation comes with npm. Verify by running `npm -v` in your terminal.
+- **Electron:** Install Electron globally using npm:
+
+  ```bash
+  npm install -g electron
+  ```
 
 ### Steps
 
@@ -53,6 +56,21 @@ Local models are supported by Ollama. It is recommend you download Ollama and an
    npm start
    ```
 
+4. **Build the Application**
+
+   ```bash
+   npm run build:mac
+   ```
+
+   ```bash
+   npm run build:win
+   ```
+
+   ```bash
+   npm run build:linux
+   ```
+*note you can only build for mac on a mac os system. You can build for windows and linux on any system with the correct dependencies.
+
 ## Usage
 
 ### Starting a Conversation
@@ -61,7 +79,7 @@ Local models are supported by Ollama. It is recommend you download Ollama and an
    - Use the dropdown menu at the top to choose from available AI models across different providers.
 
 2. **Type Your Message:**
-   - Enter your message in the input field at the bottom and press Enter or click the send button.
+   - Enter your message in the input field at the bottom and press Enter or click the send button. Change models at any time without losing any conversation context. For example you can use any onlie model to answer a question and then switch to a local model to summarize or translate the conversation. Local models can also be used without an internet connection and maintain privacy by not sending requests to the internet. Do remember the entire context is sent with each request.
 
 3. **Manage Conversations:**
    - Use the "Clear Conversation" button to reset the chat history.
@@ -122,4 +140,3 @@ PolyLace uses a combination of JSON and YAML configuration files to manage setti
 
 Customize the AI's persona by editing the `system_prompt.txt` file located in the `data` directory.
 
-![PolyLace Logo](assets/PolyLace.png)
