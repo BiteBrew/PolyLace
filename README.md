@@ -10,12 +10,14 @@ To get started with local models, follow these steps:
    - Download and install Ollama from [ollama.com](https://ollama.com/).
 
 
-To install the models run the following commands in your terminal:
+To install the default models run the following commands in your terminal:
 
 ```bash
 ollama pull llama3.2
 ollama pull llama3.2:1b
 ```
+Other installable models can be found [here](https://docs.ollama.com/library).
+
 To start the ollama server run the following command in your terminal usually this will already be running in the background:
 
 ```bash
@@ -26,23 +28,23 @@ To list the models currently available on your PC run the following command:
 ```bash
 ollama list
 ```   
-Add those exact names, separated by commas, in the settings to make them avalable in PolyLace.
+Make sure to add those exact names, separated by commas, in the PolyLace settings to make them avalable in PolyLace.
 
 ### Getting API Keys and Model Names
 
-Get an OpenAI API key [here](https://platform.openai.com/account/api-keys).
+Get an OpenAI API key (paid plan required) [here](https://platform.openai.com/account/api-keys).
 
 See their available models [here](https://platform.openai.com/docs/models).
 
-Get an Anthropic API key [here](https://www.anthropic.com/product).
+Get an Anthropic API key (paid plan required) [here](https://www.anthropic.com/product).
 
 See their available models [here](https://docs.anthropic.com/claude-3-opus/reference/Claude-3-Opus-Models).
 
-Get an Groq API key [here](https://console.groq.com/keys).
+Get an Groq API key (free key available) [here](https://console.groq.com/keys).
 
 See their available models [here](https://docs.groq.com/api/models).
 
-Get a Google API key [here](https://console.cloud.google.com/apis/credentials).
+Get a Google API key (free key available) [here](https://console.cloud.google.com/apis/credentials).
 
 See their available models [here](https://ai.google.dev/gemini-api/docs/models).
 
