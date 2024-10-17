@@ -1,8 +1,8 @@
 // main.js
-const { app, BrowserWindow, ipcMain, nativeTheme } = require('electron');
+const { app, BrowserWindow, ipcMain, nativeTheme, shell } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
-//const marked = require('marked');
+const marked = require('marked');
 const https = require('https');
 const http = require('http');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
@@ -52,7 +52,7 @@ async function createDataFiles() {
       { path: API_KEYS_FILE, content: JSON.stringify({
         openai: { apiKey: '', models: ['gpt-4o', 'gpt-4o-mini'] },
         anthropic: { apiKey: '', models: ['claude-3-5-sonnet-20240620', 'claude-3-opus-20240229', 'claude-3-haiku-20240307'] },
-        groq: { apiKey: '', models: ['llama-3.2-90b-vision-preview', 'llama-3.2-11b-vision-preview', 'mixtral-8x7b-32768'] },
+        groq: { apiKey: '', models: ['llama-3.2-11b-vision-preview', 'mixtral-8x7b-32768'] },
         local: { serverAddress: 'http://localhost:11434/api/chat', models: ['llama3.2', 'llama3.2:1b'] }
       }, null, 2) },
       { path: SELECTED_MODEL_FILE, content: JSON.stringify({ selectedModel: 'openai:gpt-4o' }) }
@@ -82,6 +82,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: false // Add this line
     },
     icon: path.join(__dirname, 'assets', 'PolyLace.png')
   });
@@ -97,9 +98,19 @@ function createWindow() {
   // Open DevTools (optional)
   win.webContents.openDevTools();
 
+  // Send the initial theme to the renderer
+  win.webContents.on('did-finish-load', () => {
+    win.webContents.send('system-theme-updated', nativeTheme.shouldUseDarkColors ? 'dark' : 'light');
+  });
+
   // Listen for theme changes
   nativeTheme.on('updated', () => {
-    win.webContents.send('system-theme-updated');
+    win.webContents.send('system-theme-updated', nativeTheme.shouldUseDarkColors ? 'dark' : 'light');
+  });
+
+  // Open links in default browser
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    return { action: 'deny' };
   });
 }
 

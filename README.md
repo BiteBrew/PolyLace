@@ -112,7 +112,7 @@ See their available models [here](https://docs.anthropic.com/claude-3-opus/refer
 
 Get an Groq API key (free key available) [here](https://console.groq.com/keys).
 
-See their available models [here](https://docs.groq.com/docs/models).
+See their available models [here](https://console.groq.com/docs/models).
 
 Get a Google API key (free key available) [here](https://console.cloud.google.com/apis/credentials).
 
