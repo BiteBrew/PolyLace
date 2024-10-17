@@ -2,52 +2,6 @@
 
 PolyLace is a cross-platform Electron-based application designed to weave conversations across multiple AI models. Whether you're leveraging OpenAI, Anthropic, Groq AI, or local models, PolyLace provides a unified interface to interact with your preferred AI systems seamlessly.
 
-### Getting Started with Local Models
-
-To get started with local models, follow these steps:
-
-1. **Install Ollama**:
-   - Download and install Ollama from [ollama.com](https://ollama.com/).
-
-
-To install the default models run the following commands in your terminal:
-
-```bash
-ollama pull llama3.2
-ollama pull llama3.2:1b
-```
-Other installable models can be found [here](https://ollama.com/library).
-
-To start the ollama server run the following command in your terminal usually this will already be running in the background:
-
-```bash
-ollama serve
-```
-To list the models currently available on your PC run the following command:
-
-```bash
-ollama list
-```   
-Make sure to add those exact names, separated by commas, in the PolyLace settings to make them avalable in PolyLace.
-
-### Getting API Keys and Model Names
-
-Get an OpenAI API key (paid plan required) [here](https://platform.openai.com/account/api-keys).
-
-See their available models [here](https://platform.openai.com/docs/models).
-
-Get an Anthropic API key (paid plan required) [here](https://www.anthropic.com/product).
-
-See their available models [here](https://docs.anthropic.com/claude-3-opus/reference/Claude-3-Opus-Models).
-
-Get an Groq API key (free key available) [here](https://console.groq.com/keys).
-
-See their available models [here](https://docs.groq.com/docs/models).
-
-Get a Google API key (free key available) [here](https://console.cloud.google.com/apis/credentials).
-
-See their available models [here](https://ai.google.dev/gemini-api/docs/models/gemini).
-
 ## Table of Contents
 
 - [Features](#features)
@@ -116,6 +70,52 @@ See their available models [here](https://ai.google.dev/gemini-api/docs/models/g
    npm run build:linux
    ```
 *note you can only build for mac on a mac os system. You can build for windows and linux on any system with the correct dependencies.
+
+### Getting Started with Local Models
+
+To get started with local models, follow these steps:
+
+1. **Install Ollama**:
+   - Download and install Ollama from [ollama.com](https://ollama.com/).
+
+
+To install the default models run the following commands in your terminal:
+
+```bash
+ollama pull llama3.2
+ollama pull llama3.2:1b
+```
+Other installable models can be found [here](https://ollama.com/library).
+
+To start the ollama server run the following command in your terminal usually this will already be running in the background:
+
+```bash
+ollama serve
+```
+To list the models currently available on your PC run the following command:
+
+```bash
+ollama list
+```   
+Make sure to add those exact names, separated by commas, in the PolyLace settings to make them avalable in PolyLace.
+
+### Getting API Keys and Model Names
+
+Get an OpenAI API key (paid plan required) [here](https://platform.openai.com/account/api-keys).
+
+See their available models [here](https://platform.openai.com/docs/models).
+
+Get an Anthropic API key (paid plan required) [here](https://www.anthropic.com/product).
+
+See their available models [here](https://docs.anthropic.com/claude-3-opus/reference/Claude-3-Opus-Models).
+
+Get an Groq API key (free key available) [here](https://console.groq.com/keys).
+
+See their available models [here](https://docs.groq.com/docs/models).
+
+Get a Google API key (free key available) [here](https://console.cloud.google.com/apis/credentials).
+
+See their available models [here](https://ai.google.dev/gemini-api/docs/models/gemini).
 
 ## Usage
 
