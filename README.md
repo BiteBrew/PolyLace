@@ -6,6 +6,7 @@ PolyLace is a cross-platform Electron-based application designed to weave conver
 
 - [Features](#features)
 - [Installation](#installation)
+- [Getting Started with Local Models](#getting-started-with-local-models)
 - [Usage](#usage)
 - [Configuration](#configuration)
 - [Current Features](#current-features)
