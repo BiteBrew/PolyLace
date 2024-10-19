@@ -239,11 +239,9 @@ safeIpcHandle('load-api-keys', async () => {
 });
 
 // Save API Keys
-safeIpcHandle('save-api-keys', async (event, apiKeys) => {
+safeIpcHandle('save-api-keys', async (event, newApiKeys) => {
   try {
-    console.log('Saving API keys:', JSON.stringify(apiKeys, null, 2));
-    await fs.writeFile(API_KEYS_FILE, JSON.stringify(apiKeys, null, 2));
-    console.log('API keys saved successfully');
+    await fs.writeFile(API_KEYS_FILE, JSON.stringify(newApiKeys, null, 2));
     return { status: 'success' };
   } catch (error) {
     console.error('Error saving API keys:', error);
@@ -557,3 +555,10 @@ async function streamLocal(serverAddress, model, messages) {
     mainWindow.webContents.send('local-stream', JSON.stringify({ error: error.message }));
   }
 }
+
+ipcMain.on('close-options-modal', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (win) {
+    win.webContents.send('close-options-modal');
+  }
+});
