@@ -660,3 +660,21 @@ pre {
   opacity: 0.9;
   z-index: 1000;
 }
+/* Existing styles for input-field */
+#input-field {
+  width: 100%;
+  padding: 10px;
+  font-size: 16px;
+  box-sizing: border-box;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  transition: height 0.2s ease; /* Smooth height transition */
+}
+
+/* Enhanced styles for multi-line support */
+#input-field {
+  resize: none; /* Prevent manual resizing */
+  overflow: hidden; /* Hide scrollbar */
+  min-height: 40px; /* Minimum height */
+  max-height: 400px; /* Increased maximum height to accommodate longer messages */
+}

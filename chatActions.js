@@ -4,7 +4,7 @@ import {
   streamingContent, currentStreamingMessage, lastDisplayedContent, 
   apiKeys, updateMessages, updateStreamingContent, 
   updateCurrentStreamingMessage, updateLastDisplayedContent,
-  scrollToBottom
+  scrollToBottom, autoResizeTextarea
 } from './renderer.js';
 import { displayMessage, updateMessageContent, displayError } from './chatRenderer.js';
 import { handleStreamingResponse } from './streamHandler.js';
@@ -14,13 +14,19 @@ const { ipcRenderer } = electron;
 
 export async function sendMessage() {
   const userInput = inputField.value.trim();
+  
+  // Handle commands to exit the application
   if (userInput.toLowerCase() === 'exit' || userInput.toLowerCase() === 'quit') {
     window.close();
     return;
   }
+
+  // Prevent sending empty messages
   if (userInput === '') return;
 
-  inputField.value = '';
+  inputField.value = ''; // Clear the textarea
+  autoResizeTextarea(inputField, true); // Reset the textarea height
+  updateStreamingContent(''); // Clear previous streaming content
 
   const userMessage = { role: 'user', content: userInput };
   messages.push(userMessage);
@@ -31,11 +37,7 @@ export async function sendMessage() {
   const [provider, model] = selectedModel.split(':');
 
   try {
-    // Clear streaming content before starting a new message
-    updateStreamingContent('');
-    updateCurrentStreamingMessage(null);
-
-    // For all providers, display an empty AI message to be updated
+    // Display an empty AI message to be updated
     updateCurrentStreamingMessage(await displayMessage('AI', ''));
 
     // Initiate streaming based on provider
@@ -72,11 +74,11 @@ export async function sendMessage() {
 export async function clearChat() {
   try {
     console.log('Clearing chat...');
-    updateMessages([]); // Use the new updateMessages function
+    updateMessages([]); // Clear the messages array
     console.log('Messages array cleared.');
-    await ipcRenderer.invoke('save-chat-history', messages);
+    await ipcRenderer.invoke('save-chat-history', []); // Save empty chat history
     console.log('Chat history saved.');
-    chatDisplay.innerHTML = ''; // Directly clear the chat display
+    chatDisplay.innerHTML = ''; // Clear the chat display
     console.log('Chat display cleared.');
   } catch (error) {
     console.error('Error clearing chat:', error);
@@ -189,3 +191,24 @@ export async function populateOptionsForm() {
   document.getElementById('google-api-key').value = currentApiKeys.google.apiKey || '';
   document.getElementById('google-models').value = currentApiKeys.google.models.join(', ');
 }
+
+export function setupEventListeners() {
+  if (inputField) {
+    inputField.addEventListener('input', function() {
+      autoResizeTextarea(this);
+    });
+
+    inputField.addEventListener('keydown', function(event) {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+      }
+      // Allow Shift+Enter for new lines
+    });
+  } else {
+    console.error('inputField is not available');
+  }
+}
+
+// Export functions
+
