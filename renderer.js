@@ -1,5 +1,5 @@
 // renderer.js
-import { setupEventListeners } from './eventHandlers.js';
+import { setupEventListeners, clearChat } from './chatActions.js';
 import { renderChat, displayMessage, updateMessageContent } from './chatRenderer.js';
 import { loadApiKeys, loadChatHistory, loadConfig, loadSystemPrompt, loadSelectedModel } from './dataLoader.js';
 import { handleStreamingResponse } from './streamHandler.js';
@@ -33,6 +33,66 @@ const optionsButton = document.getElementById('options-button');
 const optionsModal = document.getElementById('options-modal');
 const optionsForm = document.getElementById('options-form');
 const closeButton = document.querySelector('.close-button');
+
+// Add auto-resize function
+function autoResizeTextarea(textarea, reset = false) {
+  if (reset) {
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+    return;
+  }
+  
+  textarea.style.height = 'auto';
+  textarea.style.height = `${textarea.scrollHeight}px`;
+}
+
+// Add paste handling function
+function handlePaste(event) {
+  event.preventDefault();
+  const clipboardData = event.clipboardData || window.clipboardData;
+  let pastedData = clipboardData.getData('Text');
+
+  // Optional: Sanitize pasted data
+  pastedData = sanitizePastedData(pastedData);
+
+  // Insert the sanitized text at the cursor position
+  insertAtCursor(event.target, pastedData);
+}
+
+// Sanitize pasted data
+function sanitizePastedData(text) {
+  // Example: Remove any unnecessary whitespace
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+// Insert text at cursor position
+function insertAtCursor(textarea, text) {
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  const before = textarea.value.substring(0, start);
+  const after = textarea.value.substring(end);
+  textarea.value = before + text + after;
+  
+  // Move the cursor to the end of the inserted text
+  const cursorPosition = start + text.length;
+  textarea.setSelectionRange(cursorPosition, cursorPosition);
+  
+  // Trigger the input event to resize the textarea
+  textarea.dispatchEvent(new Event('input'));
+}
+
+// Expose functions to global scope
+window.autoResizeTextarea = autoResizeTextarea;
+window.handlePaste = handlePaste;
+window.sanitizePastedData = sanitizePastedData;
+window.insertAtCursor = insertAtCursor;
+
+// Add event listeners for auto-resize and paste handling
+inputField.addEventListener('input', function() {
+  autoResizeTextarea(this);
+});
+
+inputField.addEventListener('paste', handlePaste);
 
 // Add this function to set up streaming listeners
 function setupStreamingListeners() {
@@ -82,6 +142,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   ipcRenderer.on('theme-updated', (event, theme) => {
     document.body.setAttribute('data-theme', theme);
   });
+
+  const clearButton = document.getElementById('clear-button');
+  if (clearButton) {
+    clearButton.addEventListener('click', clearChat);
+  } else {
+    console.error('Clear button not found');
+  }
 });
 
 function checkChatDisplay() {
@@ -162,5 +229,6 @@ export {
   streamingContent, currentStreamingMessage, lastDisplayedContent, groqBuffer,
   chatDisplay, inputField, modelSelector, clearButton, optionsButton, optionsModal, optionsForm, closeButton,
   scrollToBottom, updateMessages, updateStreamingContent, updateCurrentStreamingMessage, updateLastDisplayedContent,
-  updateGroqBuffer
+  updateGroqBuffer,
+  autoResizeTextarea
 };

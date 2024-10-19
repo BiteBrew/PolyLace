@@ -43,7 +43,13 @@
 
     <!-- Chat Display -->
     <div id="chat-display" class="chat-display"></div>
-    <input type="text" id="input-field" placeholder="Type your message here...">
+    
+    <!-- Updated Input Field -->
+    <textarea id="input-field" placeholder="Type your message here..."
+              rows="1" 
+              style="resize: none; overflow: hidden;"
+              oninput="autoResizeTextarea(this)"
+              onpaste="handlePaste(event)"></textarea>
   </div>
 
   <!-- Options Modal -->
