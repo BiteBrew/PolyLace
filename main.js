@@ -79,15 +79,14 @@ function createWindow() {
     width: 800,
     height: 600,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: false // Add this line
+      nodeIntegration: true,
+      contextIsolation: false,
+      enableRemoteModule: true
     },
     icon: path.join(__dirname, 'assets', 'PolyLace.png')
   });
 
-  win.setMenu(null); // Remove the default menu
+  win.setMenu(null);
   win.loadFile('index.html');
 
   // Error listener
@@ -520,8 +519,6 @@ function setupGoogleStreamListener() {
     mainWindow.webContents.send('google-stream', chunk);
   });
 }
-
-// Expose `streamGoogle` via window.api in preload.js
 
 function notifyRendererOfThemeChange() {
   mainWindow.webContents.send('theme-updated');

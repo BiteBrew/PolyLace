@@ -1,3 +1,5 @@
+const electron = window.require('electron');
+const { ipcRenderer } = electron;
 import { sendMessage, clearChat, handleOptionsSubmit } from './chatActions.js';
 import { saveSelectedModel } from './dataLoader.js';
 import { applySystemTheme } from './dataLoader.js';
@@ -21,7 +23,7 @@ export function setupEventListeners() {
 
   optionsForm.addEventListener('submit', handleOptionsSubmit);
 
-  window.api.on('theme-updated', async () => {
+  ipcRenderer.on('theme-updated', async () => {
     await applySystemTheme();
   });
 

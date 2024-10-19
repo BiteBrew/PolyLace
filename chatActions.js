@@ -1,6 +1,6 @@
 // chatActions.js
 import { 
-  inputField, modelSelector, chatDisplay, messages, 
+  inputField, modelSelector, chatDisplay, messages,
   streamingContent, currentStreamingMessage, lastDisplayedContent, 
   apiKeys, updateMessages, updateStreamingContent, 
   updateCurrentStreamingMessage, updateLastDisplayedContent,
@@ -9,6 +9,8 @@ import {
 import { displayMessage, updateMessageContent, displayError } from './chatRenderer.js';
 import { handleStreamingResponse } from './streamHandler.js';
 import { populateModelSelector } from './uiUpdater.js';
+import electron from './electronBridge.js';
+const { ipcRenderer } = electron;
 
 export async function sendMessage() {
   const userInput = inputField.value.trim();
@@ -23,7 +25,7 @@ export async function sendMessage() {
   const userMessage = { role: 'user', content: userInput };
   messages.push(userMessage);
   displayMessage('You', userInput);
-  await window.api.saveChatHistory(messages);
+  await ipcRenderer.invoke('save-chat-history', messages);
 
   const selectedModel = modelSelector.value; // Format: Provider:ModelName
   const [provider, model] = selectedModel.split(':');
@@ -39,15 +41,15 @@ export async function sendMessage() {
     // Initiate streaming based on provider
     if (provider === 'local') {
       const serverAddress = apiKeys.local.serverAddress;
-      await window.api.streamLocal(serverAddress, model, messages);
+      await ipcRenderer.invoke('stream-local', serverAddress, model, messages);
     } else if (provider === 'openai') {
-      await window.api.streamOpenAI(model, messages);
+      await ipcRenderer.invoke('stream-openai', model, messages);
     } else if (provider === 'anthropic') {
-      await window.api.streamAnthropic(model, messages);
+      await ipcRenderer.invoke('stream-anthropic', model, messages);
     } else if (provider === 'groq') {
-      await window.api.streamGroq(model, messages);
+      await ipcRenderer.invoke('stream-groq', model, messages);
     } else if (provider === 'google') {
-      await window.api.streamGoogle(model, messages);
+      await ipcRenderer.invoke('stream-google', model, messages);
     } else {
       throw new Error(`Unknown provider: ${provider}`);
     }
@@ -72,7 +74,7 @@ export async function clearChat() {
     console.log('Clearing chat...');
     updateMessages([]); // Use the new updateMessages function
     console.log('Messages array cleared.');
-    await window.api.saveChatHistory(messages);
+    await ipcRenderer.invoke('save-chat-history', messages);
     console.log('Chat history saved.');
     chatDisplay.innerHTML = ''; // Directly clear the chat display
     console.log('Chat display cleared.');
@@ -111,7 +113,7 @@ export async function handleOptionsSubmit(e) {
   console.log('Saving API keys:', JSON.stringify(newApiKeys, null, 2));
 
   try {
-    const result = await window.api.saveApiKeys(newApiKeys);
+    const result = await ipcRenderer.invoke('save-api-keys', newApiKeys);
     console.log('Save API keys result:', result);
     if (result.status === 'success') {
       console.log('API keys saved successfully');
@@ -153,7 +155,7 @@ export async function finalizeMessage() {
     await updateMessageContent(currentStreamingMessage, streamingContent);
     const aiMessage = { role: 'assistant', content: String(streamingContent).trim() };
     updateMessages([...messages, aiMessage]);
-    await window.api.saveChatHistory(messages);
+    await ipcRenderer.invoke('save-chat-history', messages);
   }
   resetStreamingState();
 }
