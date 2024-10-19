@@ -7,7 +7,12 @@ export async function loadApiKeys() {
 }
 
 export async function loadChatHistory() {
-  return await ipcRenderer.invoke('load-chat-history');
+  try {
+    return await ipcRenderer.invoke('load-chat-history');
+  } catch (error) {
+    console.error('Error loading chat history:', error);
+    return [];
+  }
 }
 
 export async function loadConfig() {

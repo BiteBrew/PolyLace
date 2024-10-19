@@ -79,6 +79,9 @@ function processLocalChunk(chunk) {
     if (data.message && data.message.content) {
       return { newContent: data.message.content, isDone: data.done === true };
     }
+    if (data.done === true) {
+      return { newContent: '', isDone: true };
+    }
   } catch (jsonError) {
     console.warn('Error parsing JSON from local provider:', jsonError, 'Raw chunk:', chunk);
     return { newContent: chunk, isDone: false };
