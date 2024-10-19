@@ -50,33 +50,24 @@ function autoResizeTextarea(textarea, reset = false) {
 function handlePaste(event) {
   event.preventDefault();
   const clipboardData = event.clipboardData || window.clipboardData;
-  let pastedData = clipboardData.getData('Text');
+  let pastedData = clipboardData.getData('text/plain');
 
-  // Optional: Sanitize pasted data
-  pastedData = sanitizePastedData(pastedData);
+  // Preserve line breaks and indentation
+  pastedData = pastedData.replace(/\n/g, '\n');
 
-  // Insert the sanitized text at the cursor position
-  insertAtCursor(event.target, pastedData);
-}
-
-// Sanitize pasted data
-function sanitizePastedData(text) {
-  // Example: Remove any unnecessary whitespace
-  return text.replace(/\s+/g, ' ').trim();
-}
-
-// Insert text at cursor position
-function insertAtCursor(textarea, text) {
-  const start = textarea.selectionStart;
-  const end = textarea.selectionEnd;
-  const before = textarea.value.substring(0, start);
-  const after = textarea.value.substring(end);
-  textarea.value = before + text + after;
+  // Insert the formatted text at the cursor position
+  const textarea = event.target;
+  const startPos = textarea.selectionStart;
+  const endPos = textarea.selectionEnd;
+  const textBefore = textarea.value.substring(0, startPos);
+  const textAfter = textarea.value.substring(endPos);
   
-  // Move the cursor to the end of the inserted text
-  const cursorPosition = start + text.length;
-  textarea.setSelectionRange(cursorPosition, cursorPosition);
+  textarea.value = textBefore + pastedData + textAfter;
   
+  // Update cursor position
+  const newCursorPos = startPos + pastedData.length;
+  textarea.setSelectionRange(newCursorPos, newCursorPos);
+
   // Trigger the input event to resize the textarea
   textarea.dispatchEvent(new Event('input'));
 }
@@ -84,8 +75,6 @@ function insertAtCursor(textarea, text) {
 // Expose functions to global scope
 window.autoResizeTextarea = autoResizeTextarea;
 window.handlePaste = handlePaste;
-window.sanitizePastedData = sanitizePastedData;
-window.insertAtCursor = insertAtCursor;
 
 // Add event listeners for auto-resize and paste handling
 inputField.addEventListener('input', function() {
