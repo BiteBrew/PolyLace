@@ -1,6 +1,8 @@
 // chatRenderer.js
 import { chatDisplay, scrollToBottom, messages } from './renderer.js';
 import { resolveContent } from './utils.js';
+import electron from './electronBridge.js';
+const { ipcRenderer } = electron;
 
 export async function renderChat() {
   chatDisplay.innerHTML = '';
@@ -29,7 +31,7 @@ export async function displayMessage(sender, content) {
   
   // CRITICAL: DO NOT MODIFY THE FOLLOWING SECTION
   // This ensures that links are rendered correctly and can be intercepted
-  const parsedContent = await window.api.parseMarkdown(content);
+  const parsedContent = await ipcRenderer.invoke('parse-markdown', content);
   contentElement.innerHTML = parsedContent;
   // END OF CRITICAL SECTION
   
@@ -52,12 +54,12 @@ export async function updateMessageContent(messageElementPromise, content) {
 
     const contentElement = messageElement.querySelector('.message-content');
     if (contentElement) {
-      contentElement.innerHTML = await window.api.parseMarkdown(content);
+      contentElement.innerHTML = await ipcRenderer.invoke('parse-markdown', content);
     } else {
       console.warn('Content element not found in message, creating new one');
       const newContentElement = document.createElement('div');
       newContentElement.className = 'message-content';
-      newContentElement.innerHTML = await window.api.parseMarkdown(content);
+      newContentElement.innerHTML = await ipcRenderer.invoke('parse-markdown', content);
       messageElement.appendChild(newContentElement);
     }
     scrollToBottom();

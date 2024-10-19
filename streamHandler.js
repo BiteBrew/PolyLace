@@ -2,7 +2,6 @@
 import { updateDisplayIfNeeded, finalizeMessage, resetStreamingState } from './chatActions.js';
 import { updateStreamingContent, groqBuffer, updateGroqBuffer } from './renderer.js';
 import { displayError } from './chatRenderer.js';
-
 export async function handleStreamingResponse(sender, chunk, provider) {
   console.log(`Handling streaming response from ${provider}:`, chunk);
   try {

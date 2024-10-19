@@ -4,6 +4,15 @@ import { renderChat, displayMessage, updateMessageContent } from './chatRenderer
 import { loadApiKeys, loadChatHistory, loadConfig, loadSystemPrompt, loadSelectedModel } from './dataLoader.js';
 import { handleStreamingResponse } from './streamHandler.js';
 import { populateModelSelector } from './uiUpdater.js';
+import electron from './electronBridge.js';
+const { ipcRenderer } = electron;
+const marked = require('marked');
+
+// Set up marked options
+marked.setOptions({
+  mangle: false,
+  headerIds: false
+});
 
 let apiKeys = {};
 let messages = [];
@@ -27,16 +36,16 @@ const closeButton = document.querySelector('.close-button');
 
 // Add this function to set up streaming listeners
 function setupStreamingListeners() {
-  window.api.on('openai-stream', (chunk) => handleStreamingResponse('OpenAI', chunk, 'openai'));
-  window.api.on('anthropic-stream', (chunk) => handleStreamingResponse('Anthropic', chunk, 'anthropic'));
-  window.api.on('groq-stream', (chunk) => handleStreamingResponse('Groq', chunk, 'groq'));
-  window.api.on('local-stream', (chunk) => handleStreamingResponse('Local', chunk, 'local'));
-  window.api.on('google-stream', (chunk) => handleStreamingResponse('Google', chunk, 'google'));
+  ipcRenderer.on('openai-stream', (event, chunk) => handleStreamingResponse('OpenAI', chunk, 'openai'));
+  ipcRenderer.on('anthropic-stream', (event, chunk) => handleStreamingResponse('Anthropic', chunk, 'anthropic'));
+  ipcRenderer.on('groq-stream', (event, chunk) => handleStreamingResponse('Groq', chunk, 'groq'));
+  ipcRenderer.on('local-stream', (event, chunk) => handleStreamingResponse('Local', chunk, 'local'));
+  ipcRenderer.on('google-stream', (event, chunk) => handleStreamingResponse('Google', chunk, 'google'));
 }
 
 async function applySystemTheme() {
   try {
-    const theme = await window.api.getSystemTheme();
+    const theme = await ipcRenderer.invoke('get-system-theme');
     document.body.setAttribute('data-theme', theme);
   } catch (error) {
     console.error('Error applying system theme:', error);
@@ -47,7 +56,7 @@ function handleLinkClicks(event) {
   const target = event.target.closest('a');
   if (target && target.href) {
     event.preventDefault();
-    window.api.openExternalLink(target.href);
+    ipcRenderer.invoke('open-external-link', target.href);
   }
 }
 
@@ -70,7 +79,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.addEventListener('click', handleLinkClicks);
 
   // Listen for theme changes
-  window.api.onThemeUpdated((theme) => {
+  ipcRenderer.on('theme-updated', (event, theme) => {
     document.body.setAttribute('data-theme', theme);
   });
 });
@@ -121,6 +130,32 @@ function updateGroqBuffer(newBufferOrUpdateFunction) {
     groqBuffer = newBufferOrUpdateFunction;
   }
 }
+
+// Listen for theme updates
+ipcRenderer.on('system-theme-updated', (event, theme) => {
+  // Handle theme update
+});
+
+// Function to parse markdown
+function parseMarkdown(content) {
+  return marked.parse(content);
+}
+
+// Function to open external links
+function openExternalLink(url) {
+  shell.openExternal(url);
+}
+
+// Call these functions when needed
+applySystemTheme();
+loadApiKeys();
+
+// Export functions if needed
+module.exports = {
+  parseMarkdown,
+  openExternalLink,
+  // ... other functions you want to expose ...
+};
 
 export { 
   apiKeys, messages, config, systemPrompt, selectedModel, 
