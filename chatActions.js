@@ -117,6 +117,8 @@ export async function handleOptionsSubmit(e) {
     console.log('Save API keys result:', result);
     if (result.status === 'success') {
       console.log('API keys saved successfully');
+      // Update the apiKeys in renderer.js
+      Object.assign(apiKeys, newApiKeys);
       // Optionally, you can add a visual confirmation here
     } else {
       console.error('Failed to save API keys:', result.message);
@@ -130,8 +132,8 @@ export async function handleOptionsSubmit(e) {
   // Re-populate the model selector with updated models
   await populateModelSelector();
 
-  // Close modal
-  optionsModal.style.display = 'none';
+  // Emit an event to close the modal
+  ipcRenderer.send('close-options-modal');
 }
 
 export async function updateDisplayIfNeeded() {
@@ -169,4 +171,21 @@ export function resetStreamingState() {
   // If needed, add a similar update function for groqBuffer.
 }
 
-// No need for additional exports here, as all functions are already exported individually
+export async function populateOptionsForm() {
+  const currentApiKeys = await ipcRenderer.invoke('load-api-keys');
+  
+  document.getElementById('openai-api-key').value = currentApiKeys.openai.apiKey || '';
+  document.getElementById('openai-models').value = currentApiKeys.openai.models.join(', ');
+  
+  document.getElementById('anthropic-api-key').value = currentApiKeys.anthropic.apiKey || '';
+  document.getElementById('anthropic-models').value = currentApiKeys.anthropic.models.join(', ');
+  
+  document.getElementById('groq-api-key').value = currentApiKeys.groq.apiKey || '';
+  document.getElementById('groq-models').value = currentApiKeys.groq.models.join(', ');
+  
+  document.getElementById('local-server-address').value = currentApiKeys.local.serverAddress || '';
+  document.getElementById('local-models').value = currentApiKeys.local.models.join(', ');
+  
+  document.getElementById('google-api-key').value = currentApiKeys.google.apiKey || '';
+  document.getElementById('google-models').value = currentApiKeys.google.models.join(', ');
+}
