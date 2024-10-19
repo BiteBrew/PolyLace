@@ -29,18 +29,87 @@ export async function displayMessage(sender, content) {
   const contentElement = document.createElement('div');
   contentElement.className = 'message-content';
   
-  // CRITICAL: DO NOT MODIFY THE FOLLOWING SECTION
-  // This ensures that links are rendered correctly and can be intercepted
   const parsedContent = await ipcRenderer.invoke('parse-markdown', content);
   contentElement.innerHTML = parsedContent;
-  // END OF CRITICAL SECTION
+  
+  // Add copy buttons to code blocks
+  addCopyButtonsToCodeBlocks(contentElement);
   
   messageElement.appendChild(contentElement);
+  
+  // Add copy icon for the entire message
+  if (sender.toLowerCase() === 'ai') {
+    const copyIconWrapper = document.createElement('div');
+    copyIconWrapper.className = 'copy-icon-wrapper';
+    
+    const copyIcon = document.createElement('img');
+    copyIcon.src = 'assets/images/copy_text_icon.png';
+    copyIcon.className = 'copy-icon';
+    copyIcon.title = 'Copy to clipboard';
+    copyIcon.onclick = () => copyToClipboard(content);
+    
+    copyIconWrapper.appendChild(copyIcon);
+    messageElement.appendChild(copyIconWrapper);
+  }
   
   chatDisplay.appendChild(messageElement);
   console.log('Message element added to chatDisplay');
   scrollToBottom();
   return messageElement;
+}
+
+function addCopyButtonsToCodeBlocks(contentElement) {
+  const codeBlocks = contentElement.querySelectorAll('pre');
+  codeBlocks.forEach((pre, index) => {
+    // Create a wrapper for the button and the pre element
+    const wrapper = document.createElement('div');
+    wrapper.className = 'code-block-wrapper';
+    
+    // Create the copy button
+    const copyButton = document.createElement('button');
+    copyButton.textContent = 'Copy';
+    copyButton.className = 'copy-button';
+    copyButton.onclick = () => copyCodeToClipboard(pre, copyButton);
+    
+    // Insert the pre element into the wrapper
+    pre.parentNode.insertBefore(wrapper, pre);
+    wrapper.appendChild(copyButton);
+    wrapper.appendChild(pre);
+  });
+}
+
+function copyCodeToClipboard(pre, button) {
+  const code = pre.textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    console.log('Code copied to clipboard');
+    button.textContent = 'Copied!';
+    button.classList.add('copied');
+    setTimeout(() => {
+      button.textContent = 'Copy';
+      button.classList.remove('copied');
+    }, 2000);
+  }).catch(err => {
+    console.error('Failed to copy code: ', err);
+  });
+}
+
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    console.log('Text copied to clipboard');
+    showNotification('Text copied to clipboard');
+  }).catch(err => {
+    console.error('Failed to copy text: ', err);
+  });
+}
+
+function showNotification(message) {
+  const notification = document.createElement('div');
+  notification.textContent = message;
+  notification.className = 'notification';
+  document.body.appendChild(notification);
+  setTimeout(() => {
+    notification.remove();
+  }, 2000);
 }
 
 export async function updateMessageContent(messageElementPromise, content) {
@@ -54,12 +123,17 @@ export async function updateMessageContent(messageElementPromise, content) {
 
     const contentElement = messageElement.querySelector('.message-content');
     if (contentElement) {
-      contentElement.innerHTML = await ipcRenderer.invoke('parse-markdown', content);
+      const parsedContent = await ipcRenderer.invoke('parse-markdown', content);
+      contentElement.innerHTML = parsedContent;
+      // Re-add copy buttons to code blocks after content update
+      addCopyButtonsToCodeBlocks(contentElement);
     } else {
       console.warn('Content element not found in message, creating new one');
       const newContentElement = document.createElement('div');
       newContentElement.className = 'message-content';
-      newContentElement.innerHTML = await ipcRenderer.invoke('parse-markdown', content);
+      const parsedContent = await ipcRenderer.invoke('parse-markdown', content);
+      newContentElement.innerHTML = parsedContent;
+      addCopyButtonsToCodeBlocks(newContentElement);
       messageElement.appendChild(newContentElement);
     }
     scrollToBottom();
