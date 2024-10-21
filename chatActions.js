@@ -6,7 +6,7 @@ import {
   updateCurrentStreamingMessage, updateLastDisplayedContent,
   scrollToBottom, autoResizeTextarea
 } from './renderer.js';
-import { displayMessage, updateMessageContent, displayError } from './chatRenderer.js';
+import { displayMessage, updateMessageContent, displayError, addCopyIconToMessage } from './chatRenderer.js';
 import { handleStreamingResponse } from './streamHandler.js';
 import { populateModelSelector } from './uiUpdater.js';
 import electron from './electronBridge.js';
@@ -160,6 +160,9 @@ export async function finalizeMessage() {
     const aiMessage = { role: 'assistant', content: String(streamingContent).trim() };
     updateMessages([...messages, aiMessage]);
     await ipcRenderer.invoke('save-chat-history', messages);
+    
+    // Add the copy icon after the message is complete
+    addCopyIconToMessage(await currentStreamingMessage, streamingContent);
   }
   resetStreamingState();
 }
@@ -211,4 +214,5 @@ export function setupEventListeners() {
 }
 
 // Export functions
+
 

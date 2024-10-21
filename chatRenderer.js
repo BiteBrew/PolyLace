@@ -37,20 +37,7 @@ export async function displayMessage(sender, content) {
   
   messageElement.appendChild(contentElement);
   
-  // Add copy icon for the entire message
-  if (sender.toLowerCase() === 'ai') {
-    const copyIconWrapper = document.createElement('div');
-    copyIconWrapper.className = 'copy-icon-wrapper';
-    
-    const copyIcon = document.createElement('img');
-    copyIcon.src = 'assets/images/copy_text_icon.png';
-    copyIcon.className = 'copy-icon';
-    copyIcon.title = 'Copy to clipboard';
-    copyIcon.onclick = () => copyToClipboard(content);
-    
-    copyIconWrapper.appendChild(copyIcon);
-    messageElement.appendChild(copyIconWrapper);
-  }
+  // We'll add the copy icon later for AI messages
   
   chatDisplay.appendChild(messageElement);
   console.log('Message element added to chatDisplay');
@@ -144,4 +131,21 @@ export async function updateMessageContent(messageElementPromise, content) {
 
 export function displayError(sender, message) {
   displayMessage(sender, `❌ ${message}`);
+}
+
+// New function to add copy icon after streaming is complete
+export function addCopyIconToMessage(messageElement, content) {
+  if (messageElement.classList.contains('ai-message') && !messageElement.querySelector('.copy-icon-wrapper')) {
+    const copyIconWrapper = document.createElement('div');
+    copyIconWrapper.className = 'copy-icon-wrapper';
+    
+    const copyIcon = document.createElement('img');
+    copyIcon.src = 'assets/images/copy_text_icon.png';
+    copyIcon.className = 'copy-icon';
+    copyIcon.title = 'Copy to clipboard';
+    copyIcon.onclick = () => copyToClipboard(content);
+    
+    copyIconWrapper.appendChild(copyIcon);
+    messageElement.appendChild(copyIconWrapper);
+  }
 }
