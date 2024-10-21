@@ -1,6 +1,7 @@
 // renderer.js
-import { setupEventListeners, clearChat } from './chatActions.js';
+import { setupEventListeners } from './eventHandlers.js';
 import { renderChat, displayMessage, updateMessageContent } from './chatRenderer.js';
+import { clearChat } from './chatActions.js';
 import { loadApiKeys, loadChatHistory, loadConfig, loadSystemPrompt, loadSelectedModel } from './dataLoader.js';
 import { handleStreamingResponse } from './streamHandler.js';
 import { populateModelSelector } from './uiUpdater.js';
@@ -112,6 +113,14 @@ function handleLinkClicks(event) {
 // Update the DOMContentLoaded event listener
 window.addEventListener('DOMContentLoaded', async () => {
   console.log('DOM fully loaded and parsed');
+  
+  const optionsButton = document.getElementById('options-button');
+  if (optionsButton) {
+    console.log('Options button found in the DOM');
+  } else {
+    console.error('Options button not found in the DOM');
+  }
+  
   checkChatDisplay();
   await applySystemTheme();
   apiKeys = await loadApiKeys();

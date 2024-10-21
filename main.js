@@ -88,6 +88,7 @@ function createWindow() {
 
   win.setMenu(null);
   win.loadFile('index.html');
+  win.webContents.openDevTools(); // Add this line
 
   // Error listener
   win.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
@@ -222,16 +223,12 @@ safeIpcHandle('get-system-theme', () => {
 safeIpcHandle('load-api-keys', async () => {
   try {
     const data = await fs.readFile(API_KEYS_FILE, 'utf-8');
+    console.log('Loaded API keys:', data);
     return JSON.parse(data);
   } catch (error) {
     if (error.code === 'ENOENT') {
-      // File doesn't exist, return default structure
-      return {
-        openai: { apiKey: '', models: ['gpt-4o', 'gpt-4o-mini'] },
-        anthropic: { apiKey: '', models: ['claude-3-5-sonnet-20240620', 'claude-3-opus-20240229', 'claude-3-haiku-20240307'] },
-        groq: { apiKey: '', models: ['llama-3.2-90b-vision-preview', 'llama-3.2-11b-vision-preview', 'mixtral-8x7b-32768'] },
-        local: { serverAddress: 'http://localhost:11434/api/chat', models: ['llama3.2', 'llama3.2:1b'] }
-      };
+      console.log('API keys file not found, returning default structure');
+      return createDefaultApiKeys();
     }
     console.error('Error loading API keys:', error);
     throw error;
@@ -562,3 +559,4 @@ ipcMain.on('close-options-modal', (event) => {
     win.webContents.send('close-options-modal');
   }
 });
+

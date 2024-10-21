@@ -6,6 +6,7 @@ import {
   updateCurrentStreamingMessage, updateLastDisplayedContent,
   scrollToBottom, autoResizeTextarea
 } from './renderer.js';
+import { loadApiKeys } from './dataLoader.js';
 import { displayMessage, updateMessageContent, displayError, addCopyIconToMessage } from './chatRenderer.js';
 import { handleStreamingResponse } from './streamHandler.js';
 import { populateModelSelector } from './uiUpdater.js';
@@ -177,22 +178,31 @@ export function resetStreamingState() {
 }
 
 export async function populateOptionsForm() {
-  const currentApiKeys = await ipcRenderer.invoke('load-api-keys');
-  
-  document.getElementById('openai-api-key').value = currentApiKeys.openai.apiKey || '';
-  document.getElementById('openai-models').value = currentApiKeys.openai.models.join(', ');
-  
-  document.getElementById('anthropic-api-key').value = currentApiKeys.anthropic.apiKey || '';
-  document.getElementById('anthropic-models').value = currentApiKeys.anthropic.models.join(', ');
-  
-  document.getElementById('groq-api-key').value = currentApiKeys.groq.apiKey || '';
-  document.getElementById('groq-models').value = currentApiKeys.groq.models.join(', ');
-  
-  document.getElementById('local-server-address').value = currentApiKeys.local.serverAddress || '';
-  document.getElementById('local-models').value = currentApiKeys.local.models.join(', ');
-  
-  document.getElementById('google-api-key').value = currentApiKeys.google.apiKey || '';
-  document.getElementById('google-models').value = currentApiKeys.google.models.join(', ');
+  console.log('Populating options form');
+  try {
+    const currentApiKeys = await loadApiKeys();
+    console.log('Loaded API keys:', currentApiKeys);
+    
+    document.getElementById('openai-api-key').value = currentApiKeys.openai.apiKey || '';
+    document.getElementById('openai-models').value = currentApiKeys.openai.models.join(', ');
+    
+    document.getElementById('anthropic-api-key').value = currentApiKeys.anthropic.apiKey || '';
+    document.getElementById('anthropic-models').value = currentApiKeys.anthropic.models.join(', ');
+    
+    document.getElementById('groq-api-key').value = currentApiKeys.groq.apiKey || '';
+    document.getElementById('groq-models').value = currentApiKeys.groq.models.join(', ');
+    
+    document.getElementById('local-server-address').value = currentApiKeys.local.serverAddress || '';
+    document.getElementById('local-models').value = currentApiKeys.local.models.join(', ');
+    
+    document.getElementById('google-api-key').value = currentApiKeys.google.apiKey || '';
+    document.getElementById('google-models').value = currentApiKeys.google.models.join(', ');
+    
+    console.log('Options form populated successfully');
+  } catch (error) {
+    console.error('Error populating options form:', error);
+    throw error; // Rethrow the error to be caught in the event listener
+  }
 }
 
 export function setupEventListeners() {
@@ -214,5 +224,6 @@ export function setupEventListeners() {
 }
 
 // Export functions
+
 
 
