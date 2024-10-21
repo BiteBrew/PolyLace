@@ -1,7 +1,3 @@
-dist/*
-# Except for these specific files
-!dist/Polylace Setup 0.1.0.exe
-!dist/polylace_0.1.0_amd64.deb
-
+dist
 node_modules
 
