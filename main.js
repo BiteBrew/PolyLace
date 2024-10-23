@@ -625,4 +625,3 @@ ipcMain.on('close-options-modal', (event) => {
     win.webContents.send('close-options-modal');
   }
 });
-
