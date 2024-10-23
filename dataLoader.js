@@ -36,17 +36,47 @@ export async function loadChatHistory() {
 export async function loadConfig() {
   try {
     const config = await ipcRenderer.invoke('load-config');
-    return config;
+    // Ensure default structure if config is missing or incomplete
+    return {
+      context_window_size: config?.context_window_size || 10,
+      providers: {
+        openai: {
+          models: ['gpt-4', 'gpt-3.5-turbo'],
+          ...config?.providers?.openai
+        },
+        anthropic: {
+          models: ['claude-3-opus', 'claude-3-sonnet', 'claude-3-haiku'],
+          ...config?.providers?.anthropic
+        },
+        groq: {
+          models: ['mixtral-8x7b-32768', 'llama2-70b-4096'],
+          ...config?.providers?.groq
+        },
+        local: {
+          models: ['llama2', 'mistral'],
+          serverAddress: 'http://localhost:11434/api/chat',
+          ...config?.providers?.local
+        },
+        google: {
+          models: ['gemini-1.5-pro', 'gemini-1.5-ultra'],
+          ...config?.providers?.google
+        }
+      }
+    };
   } catch (error) {
     console.error('Error loading config:', error);
+    // Return default config if loading fails
     return {
       context_window_size: 10,
       providers: {
-        openai: { models: [] },
-        anthropic: { models: [] },
-        groq: { models: [] },
-        local: { models: [], serverAddress: '' },
-        google: { models: [] }
+        openai: { models: ['gpt-4', 'gpt-3.5-turbo'] },
+        anthropic: { models: ['claude-3-opus', 'claude-3-sonnet', 'claude-3-haiku'] },
+        groq: { models: ['mixtral-8x7b-32768', 'llama2-70b-4096'] },
+        local: { 
+          models: ['llama2', 'mistral'],
+          serverAddress: 'http://localhost:11434/api/chat'
+        },
+        google: { models: ['gemini-1.5-pro', 'gemini-1.5-ultra'] }
       }
     };
   }
@@ -73,28 +103,31 @@ export async function applySystemTheme() {
   }
 }
 
-// Modify the populateOptionsForm function in chatActions.js
+// Update populateOptionsForm to use config instead of apiKeys
 export async function populateOptionsForm() {
   try {
-    const currentApiKeys = await loadApiKeys(); // Use loadApiKeys instead of ipcRenderer.invoke
+    const currentApiKeys = await loadApiKeys();
+    const config = await loadConfig();
     
-    document.getElementById('openai-api-key').value = currentApiKeys.openai.apiKey || '';
-    document.getElementById('openai-models').value = currentApiKeys.openai.models.join(', ');
+    // Populate API keys
+    document.getElementById('openai-api-key').value = currentApiKeys.openai?.apiKey || '';
+    document.getElementById('anthropic-api-key').value = currentApiKeys.anthropic?.apiKey || '';
+    document.getElementById('groq-api-key').value = currentApiKeys.groq?.apiKey || '';
+    document.getElementById('google-api-key').value = currentApiKeys.google?.apiKey || '';
     
-    document.getElementById('anthropic-api-key').value = currentApiKeys.anthropic.apiKey || '';
-    document.getElementById('anthropic-models').value = currentApiKeys.anthropic.models.join(', ');
+    // Populate models from config
+    document.getElementById('openai-models').value = config.providers.openai.models.join(', ');
+    document.getElementById('anthropic-models').value = config.providers.anthropic.models.join(', ');
+    document.getElementById('groq-models').value = config.providers.groq.models.join(', ');
+    document.getElementById('local-models').value = config.providers.local.models.join(', ');
+    document.getElementById('google-models').value = config.providers.google.models.join(', ');
     
-    document.getElementById('groq-api-key').value = currentApiKeys.groq.apiKey || '';
-    document.getElementById('groq-models').value = currentApiKeys.groq.models.join(', ');
+    // Set local server address
+    document.getElementById('local-server-address').value = config.providers.local.serverAddress || '';
     
-    document.getElementById('local-server-address').value = currentApiKeys.local.serverAddress || '';
-    document.getElementById('local-models').value = currentApiKeys.local.models.join(', ');
-    
-    document.getElementById('google-api-key').value = currentApiKeys.google.apiKey || '';
-    document.getElementById('google-models').value = currentApiKeys.google.models.join(', ');
   } catch (error) {
     console.error('Error populating options form:', error);
-    // Handle the error, perhaps by showing a message to the user
+    throw error;
   }
 }
 
