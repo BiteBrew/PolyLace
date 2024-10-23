@@ -143,9 +143,6 @@ function createWindow() {
     console.error('Failed to load:', errorCode, errorDescription);
   });
 
-  // Open DevTools (optional)
-  win.webContents.openDevTools();
-
   // Send the initial theme to the renderer
   win.webContents.on('did-finish-load', () => {
     win.webContents.send('system-theme-updated', nativeTheme.shouldUseDarkColors ? 'dark' : 'light');
