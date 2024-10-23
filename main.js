@@ -6,39 +6,83 @@ const marked = require('marked');
 const https = require('https');
 const http = require('http');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const crypto = require('crypto');
 
-const DATA_DIR = path.join(app.getPath('userData'), 'data');
+const DATA_DIR = path.join( __dirname, 'data' );
 const HISTORY_FILE = path.join(DATA_DIR, 'chat_history.json');
 const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
 const SYSTEM_PROMPT_FILE = path.join(DATA_DIR, 'system_prompt.txt');
-const API_KEYS_FILE = path.join(app.getPath('userData'), 'api_keys.json');
+const API_KEYS_FILE = path.join(DATA_DIR, 'api_keys.enc');
 const SELECTED_MODEL_FILE = path.join(DATA_DIR, 'selected_model.json');
 
 const ipcHandlers = new Set();
 
-async function loadApiKeys() {
+function encrypt(text, password) {
+  const salt = crypto.randomBytes(16);
+  const key = crypto.scryptSync(password, salt, 32);
+  const iv = crypto.randomBytes(16);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  
+  let encrypted = cipher.update(text, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  const authTag = cipher.getAuthTag();
+  
+  return {
+    encrypted: encrypted,
+    salt: salt.toString('hex'),
+    iv: iv.toString('hex'),
+    authTag: authTag.toString('hex')
+  };
+}
+
+function decrypt(encryptedData, password) {
+  const salt = Buffer.from(encryptedData.salt, 'hex');
+  const key = crypto.scryptSync(password, salt, 32);
+  const iv = Buffer.from(encryptedData.iv, 'hex');
+  const authTag = Buffer.from(encryptedData.authTag, 'hex');
+  
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+  decipher.setAuthTag(authTag);
+  
+  let decrypted = decipher.update(encryptedData.encrypted, 'hex', 'utf8');
+  decrypted += decipher.final('utf8');
+  return decrypted;
+}
+
+async function loadApiKeys(password) {
   try {
-    const data = await fs.readFile(API_KEYS_FILE, 'utf-8');
-    console.log('Loaded API keys:', data);
-    const parsedData = JSON.parse(data);
-    if (typeof parsedData.openai.apiKey !== 'string') {
-      console.error('Invalid OpenAI API key format');
-      parsedData.openai.apiKey = '';
+    const encryptedData = await fs.readFile(API_KEYS_FILE, 'utf-8');
+    if (!encryptedData) {
+      return createEmptyApiKeys();
     }
-    return parsedData;
+    
+    // If no password provided, use a default one (not recommended for production)
+    const encryptionPassword = password || 'default-encryption-key';
+    
+    // Decrypt the data
+    const decrypted = decrypt(JSON.parse(encryptedData), encryptionPassword);
+    return JSON.parse(decrypted);
   } catch (error) {
     if (error.code === 'ENOENT') {
-      console.log('API keys file not found, returning default structure');
-      return {
-        openai: { apiKey: '', models: ['gpt-4o', 'gpt-4o-mini'] },
-        anthropic: { apiKey: '', models: ['claude-3-5-sonnet-20240620', 'claude-3-opus-20240229', 'claude-3-haiku-20240307'] },
-        groq: { apiKey: '', models: ['gemma2-9b-it, llama-3.2-11b-vision-preview, mixtral-8x7b-32768'] },
-        local: { serverAddress: 'http://localhost:11434/api/chat', models: ['llama3.2', 'llama3.2:1b'] }
-      };
+      return createEmptyApiKeys();
     }
     console.error('Error loading API keys:', error);
     throw error;
   }
+}
+
+async function saveApiKeys(apiKeys, password) {
+  const encrypted = encrypt(JSON.stringify(apiKeys), password);
+  await fs.writeFile(API_KEYS_FILE, JSON.stringify(encrypted));
+}
+
+function createEmptyApiKeys() {
+  return {
+    openai: { apiKey: '' },
+    anthropic: { apiKey: '' },
+    groq: { apiKey: '' },
+    google: { apiKey: '' }
+  };
 }
 
 async function createDataFiles() {
@@ -47,14 +91,20 @@ async function createDataFiles() {
 
     const files = [
       { path: HISTORY_FILE, content: '[]' },
-      { path: CONFIG_FILE, content: JSON.stringify({ context_window_size: 10 }) },
-      { path: SYSTEM_PROMPT_FILE, content: 'You are *Ada*, a **helpful** AI assistant.\nFeel free to ask me anything!' },
-      { path: API_KEYS_FILE, content: JSON.stringify({
-        openai: { apiKey: '', models: ['gpt-4o', 'gpt-4o-mini'] },
-        anthropic: { apiKey: '', models: ['claude-3-5-sonnet-20240620', 'claude-3-opus-20240229', 'claude-3-haiku-20240307'] },
-        groq: { apiKey: '', models: ['llama-3.2-11b-vision-preview', 'mixtral-8x7b-32768'] },
-        local: { serverAddress: 'http://localhost:11434/api/chat', models: ['llama3.2', 'llama3.2:1b'] }
+      { path: CONFIG_FILE, content: JSON.stringify({
+        context_window_size: 10,
+        providers: {
+          openai: { models: ["gpt-4o", "gpt-4o-mini"] },
+          anthropic: { models: ["claude-3-5-sonnet-20241022", "claude-3-haiku-20240307"] },
+          groq: { models: ["llama-3.2-90b-vision-preview", "llama-3.2-11b-vision-preview", "gemma2-9b-it", "mixtral-8x7b-32768"] },
+          local: {
+            serverAddress: "http://localhost:11434/api/chat",
+            models: ["llama3.2", "llama3.2:1b"]
+          },
+          google: { models: ["gemini-1.5-pro", "gemini-1.5-flash"] }
+        }
       }, null, 2) },
+      { path: SYSTEM_PROMPT_FILE, content: 'You are *Ada*, a **helpful** AI assistant.\nFeel free to ask me anything!' },
       { path: SELECTED_MODEL_FILE, content: JSON.stringify({ selectedModel: 'openai:gpt-4o' }) }
     ];
 
@@ -64,8 +114,6 @@ async function createDataFiles() {
       } catch (error) {
         if (error.code === 'ENOENT') {
           await fs.writeFile(file.path, file.content);
-        } else {
-          throw error;
         }
       }
     }
@@ -88,6 +136,7 @@ function createWindow() {
 
   win.setMenu(null);
   win.loadFile('index.html');
+  win.webContents.openDevTools(); // Add this line
 
   // Error listener
   win.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
@@ -219,19 +268,22 @@ safeIpcHandle('get-system-theme', () => {
  */
 
 // Load API Keys
-safeIpcHandle('load-api-keys', async () => {
+safeIpcHandle('load-api-keys', async (event, password) => {
   try {
-    const data = await fs.readFile(API_KEYS_FILE, 'utf-8');
-    return JSON.parse(data);
+    const encryptedData = await fs.readFile(API_KEYS_FILE, 'utf-8');
+    if (!encryptedData) {
+      return createEmptyApiKeys();
+    }
+    
+    // If no password provided, use a default one (not recommended for production)
+    const encryptionPassword = password || 'default-encryption-key';
+    
+    // Decrypt the data
+    const decrypted = decrypt(JSON.parse(encryptedData), encryptionPassword);
+    return JSON.parse(decrypted);
   } catch (error) {
     if (error.code === 'ENOENT') {
-      // File doesn't exist, return default structure
-      return {
-        openai: { apiKey: '', models: ['gpt-4o', 'gpt-4o-mini'] },
-        anthropic: { apiKey: '', models: ['claude-3-5-sonnet-20240620', 'claude-3-opus-20240229', 'claude-3-haiku-20240307'] },
-        groq: { apiKey: '', models: ['llama-3.2-90b-vision-preview', 'llama-3.2-11b-vision-preview', 'mixtral-8x7b-32768'] },
-        local: { serverAddress: 'http://localhost:11434/api/chat', models: ['llama3.2', 'llama3.2:1b'] }
-      };
+      return createEmptyApiKeys();
     }
     console.error('Error loading API keys:', error);
     throw error;
@@ -239,9 +291,16 @@ safeIpcHandle('load-api-keys', async () => {
 });
 
 // Save API Keys
-safeIpcHandle('save-api-keys', async (event, newApiKeys) => {
+safeIpcHandle('save-api-keys', async (event, newApiKeys, password) => {
   try {
-    await fs.writeFile(API_KEYS_FILE, JSON.stringify(newApiKeys, null, 2));
+    // If no password provided, use a default one (not recommended for production)
+    const encryptionPassword = password || 'default-encryption-key';
+    
+    // Encrypt the API keys
+    const encrypted = encrypt(JSON.stringify(newApiKeys), encryptionPassword);
+    
+    // Save the encrypted data
+    await fs.writeFile(API_KEYS_FILE, JSON.stringify(encrypted));
     return { status: 'success' };
   } catch (error) {
     console.error('Error saving API keys:', error);
@@ -327,9 +386,8 @@ safeIpcHandle('stream-openai', async (event, model, messages) => {
 // Anthropic Streaming
 safeIpcHandle('stream-anthropic', async (event, model, messages) => {
   try {
-    const apiKeysData = await fs.readFile(API_KEYS_FILE, 'utf-8');
-    const apiKeys = JSON.parse(apiKeysData);
-    const apiKey = apiKeys.anthropic.apiKey;
+    const apiKeys = await loadApiKeys();
+    const apiKey = apiKeys.anthropic?.apiKey;
 
     if (!apiKey) {
       throw new Error('Anthropic API key is not set.');
@@ -379,45 +437,50 @@ safeIpcHandle('stream-anthropic', async (event, model, messages) => {
 
 // Groq Streaming
 safeIpcHandle('stream-groq', async (event, model, messages) => {
-  const apiKeys = JSON.parse(await fs.readFile(API_KEYS_FILE, 'utf-8'));
-  const apiKey = apiKeys.groq.apiKey;
+  try {
+    const apiKeys = await loadApiKeys();
+    const apiKey = apiKeys.groq?.apiKey;
 
-  if (!apiKey) {
-    throw new Error('Groq API key is not set.');
+    if (!apiKey) {
+      throw new Error('Groq API key is not set.');
+    }
+
+    const data = {
+      model: model,
+      messages: messages,
+      stream: true,
+      max_tokens: 1024
+    };
+
+    return new Promise((resolve, reject) => {
+      const req = https.request('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        }
+      }, (res) => {
+        res.on('data', (chunk) => {
+          event.sender.send('groq-stream', chunk.toString());
+        });
+
+        res.on('end', () => {
+          resolve();
+        });
+      });
+
+      req.on('error', (error) => {
+        console.error('Groq Streaming Error:', error);
+        reject(error);
+      });
+
+      req.write(JSON.stringify(data));
+      req.end();
+    });
+  } catch (error) {
+    console.error('Error in stream-groq:', error);
+    throw error;
   }
-
-  const data = {
-    model: model,
-    messages: messages,
-    stream: true,
-    max_tokens: 1024
-  };
-
-  return new Promise((resolve, reject) => {
-    const req = https.request('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      }
-    }, (res) => {
-      res.on('data', (chunk) => {
-        event.sender.send('groq-stream', chunk.toString());
-      });
-
-      res.on('end', () => {
-        resolve();
-      });
-    });
-
-    req.on('error', (error) => {
-      console.error('Groq Streaming Error:', error);
-      reject(error);
-    });
-
-    req.write(JSON.stringify(data));
-    req.end();
-  });
 });
 
 // Local (Ollama) Streaming
