@@ -165,6 +165,21 @@ window.addEventListener('DOMContentLoaded', async () => {
   } else {
     console.error('Clear button not found');
   }
+
+  // Add specific handler for the local server address input
+  const localServerInput = document.getElementById('local-server-address');
+  if (localServerInput) {
+    localServerInput.addEventListener('input', function(e) {
+      e.target.value = e.target.value.trim();
+      console.log('Local server address updated:', e.target.value);
+    });
+    
+    // Remove any readonly or disabled attributes that might be present
+    localServerInput.removeAttribute('readonly');
+    localServerInput.removeAttribute('disabled');
+  } else {
+    console.error('Local server address input not found');
+  }
 });
 
 function checkChatDisplay() {
