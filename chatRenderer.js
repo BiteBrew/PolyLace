@@ -8,6 +8,9 @@ export async function renderChat() {
   chatDisplay.innerHTML = '';
   try {
     for (const message of messages) {
+      // Skip rendering system messages
+      if (message.role === 'system') continue;
+      
       const content = await resolveContent(message.content);
       await displayMessage(message.role === 'user' ? 'You' : 'AI', content);
     }
