@@ -8,12 +8,24 @@ const http = require('http');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const crypto = require('crypto');
 
-const DATA_DIR = path.join( __dirname, 'data' );
-const HISTORY_FILE = path.join(DATA_DIR, 'chat_history.json');
-const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
-const SYSTEM_PROMPT_FILE = path.join(DATA_DIR, 'system_prompt.txt');
-const API_KEYS_FILE = path.join(DATA_DIR, 'api_keys.enc');
-const SELECTED_MODEL_FILE = path.join(DATA_DIR, 'selected_model.json');
+// Define both default and user data directories
+const DEFAULT_DATA_DIR = app.isPackaged 
+  ? path.join(process.resourcesPath, 'default_data')
+  : path.join(__dirname, 'data');
+
+const USER_DATA_DIR = app.isPackaged 
+  ? path.join(app.getPath('userData'), 'data')
+  : path.join(__dirname, 'data');
+
+// Update file paths
+const DEFAULT_CONFIG_FILE = path.join(DEFAULT_DATA_DIR, 'config.json');
+const DEFAULT_SYSTEM_PROMPT_FILE = path.join(DEFAULT_DATA_DIR, 'system_prompt.txt');
+
+const USER_HISTORY_FILE = path.join(USER_DATA_DIR, 'chat_history.json');
+const USER_CONFIG_FILE = path.join(USER_DATA_DIR, 'config.json');
+const USER_SYSTEM_PROMPT_FILE = path.join(USER_DATA_DIR, 'system_prompt.txt');
+const USER_API_KEYS_FILE = path.join(USER_DATA_DIR, 'api_keys.enc');
+const USER_SELECTED_MODEL_FILE = path.join(USER_DATA_DIR, 'selected_model.json');
 
 const ipcHandlers = new Set();
 
@@ -51,7 +63,7 @@ function decrypt(encryptedData, password) {
 
 async function loadApiKeys(password) {
   try {
-    const encryptedData = await fs.readFile(API_KEYS_FILE, 'utf-8');
+    const encryptedData = await fs.readFile(USER_API_KEYS_FILE, 'utf-8');
     if (!encryptedData) {
       return createEmptyApiKeys();
     }
@@ -73,7 +85,7 @@ async function loadApiKeys(password) {
 
 async function saveApiKeys(apiKeys, password) {
   const encrypted = encrypt(JSON.stringify(apiKeys), password);
-  await fs.writeFile(API_KEYS_FILE, JSON.stringify(encrypted));
+  await fs.writeFile(USER_API_KEYS_FILE, JSON.stringify(encrypted));
 }
 
 function createEmptyApiKeys() {
@@ -87,33 +99,53 @@ function createEmptyApiKeys() {
 
 async function createDataFiles() {
   try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
+    // Ensure user data directory exists
+    await fs.mkdir(USER_DATA_DIR, { recursive: true });
+    console.log('User data directory created at:', USER_DATA_DIR);
 
-    const files = [
-      { path: HISTORY_FILE, content: '[]' },
-      { path: CONFIG_FILE, content: JSON.stringify({
-        context_window_size: 10,
-        providers: {
-          openai: { models: ["gpt-4o", "gpt-4o-mini"] },
-          anthropic: { models: ["claude-3-5-sonnet-20241022", "claude-3-haiku-20240307"] },
-          groq: { models: ["llama-3.2-90b-vision-preview", "llama-3.2-11b-vision-preview", "gemma2-9b-it", "mixtral-8x7b-32768"] },
-          local: {
-            serverAddress: "http://localhost:11434/api/chat",
-            models: ["llama3.2", "llama3.2:1b"]
-          },
-          google: { models: ["gemini-1.5-pro", "gemini-1.5-flash"] }
-        }
-      }, null, 2) },
-      { path: SYSTEM_PROMPT_FILE, content: 'You are *Ada*, a **helpful** AI assistant.\nFeel free to ask me anything!' },
-      { path: SELECTED_MODEL_FILE, content: JSON.stringify({ selectedModel: 'openai:gpt-4o' }) }
+    // Copy default files if they don't exist in user directory
+    const filesToCopy = [
+      {
+        default: DEFAULT_CONFIG_FILE,
+        user: USER_CONFIG_FILE
+      },
+      {
+        default: DEFAULT_SYSTEM_PROMPT_FILE,
+        user: USER_SYSTEM_PROMPT_FILE
+      }
     ];
 
-    for (const file of files) {
+    for (const file of filesToCopy) {
+      try {
+        await fs.access(file.user);
+        console.log(`User file exists: ${file.user}`);
+      } catch (error) {
+        if (error.code === 'ENOENT') {
+          try {
+            const defaultContent = await fs.readFile(file.default, 'utf-8');
+            await fs.writeFile(file.user, defaultContent);
+            console.log(`Copied default file to user directory: ${file.user}`);
+          } catch (copyError) {
+            console.error(`Error copying default file: ${file.default}`, copyError);
+          }
+        }
+      }
+    }
+
+    // Create other user-specific files if they don't exist
+    const userFiles = [
+      { path: USER_HISTORY_FILE, content: '[]' },
+      { path: USER_SELECTED_MODEL_FILE, content: JSON.stringify({ selectedModel: 'openai:gpt-4o' }) }
+    ];
+
+    for (const file of userFiles) {
       try {
         await fs.access(file.path);
+        console.log(`File exists: ${file.path}`);
       } catch (error) {
         if (error.code === 'ENOENT') {
           await fs.writeFile(file.path, file.content);
+          console.log(`Created file: ${file.path}`);
         }
       }
     }
@@ -190,7 +222,7 @@ function safeIpcHandle(channel, listener) {
 // Load Chat History
 safeIpcHandle('load-chat-history', async () => {
   try {
-    const data = await fs.readFile(HISTORY_FILE, 'utf-8');
+    const data = await fs.readFile(USER_HISTORY_FILE, 'utf-8');
     return JSON.parse(data);
   } catch (error) {
     console.error('Error loading chat history:', error);
@@ -201,7 +233,7 @@ safeIpcHandle('load-chat-history', async () => {
 // Save Chat History
 safeIpcHandle('save-chat-history', async (event, messages) => {
   try {
-    await fs.writeFile(HISTORY_FILE, JSON.stringify(messages, null, 4));
+    await fs.writeFile(USER_HISTORY_FILE, JSON.stringify(messages, null, 4));
     return { status: 'success' };
   } catch (error) {
     console.error('Error saving chat history:', error);
@@ -212,7 +244,7 @@ safeIpcHandle('save-chat-history', async (event, messages) => {
 // Load Config
 safeIpcHandle('load-config', async () => {
   try {
-    const data = await fs.readFile(CONFIG_FILE, 'utf-8');
+    const data = await fs.readFile(USER_CONFIG_FILE, 'utf-8');
     return JSON.parse(data);
   } catch (error) {
     console.error('Error loading config:', error);
@@ -223,7 +255,7 @@ safeIpcHandle('load-config', async () => {
 // Save Config
 safeIpcHandle('save-config', async (event, config) => {
   try {
-    await fs.writeFile(CONFIG_FILE, JSON.stringify(config, null, 4));
+    await fs.writeFile(USER_CONFIG_FILE, JSON.stringify(config, null, 4));
     return { status: 'success' };
   } catch (error) {
     console.error('Error saving config:', error);
@@ -234,7 +266,7 @@ safeIpcHandle('save-config', async (event, config) => {
 // Load System Prompt
 safeIpcHandle('load-system-prompt', async () => {
   try {
-    const data = await fs.readFile(SYSTEM_PROMPT_FILE, 'utf-8');
+    const data = await fs.readFile(USER_SYSTEM_PROMPT_FILE, 'utf-8');
     return data;
   } catch (error) {
     console.error('Error loading system prompt:', error);
@@ -245,7 +277,7 @@ safeIpcHandle('load-system-prompt', async () => {
 // Save System Prompt
 safeIpcHandle('save-system-prompt', async (event, prompt) => {
   try {
-    await fs.writeFile(SYSTEM_PROMPT_FILE, prompt);
+    await fs.writeFile(USER_SYSTEM_PROMPT_FILE, prompt);
     return { status: 'success' };
   } catch (error) {
     console.error('Error saving system prompt:', error);
@@ -270,7 +302,7 @@ safeIpcHandle('get-system-theme', () => {
 // Load API Keys
 safeIpcHandle('load-api-keys', async (event, password) => {
   try {
-    const encryptedData = await fs.readFile(API_KEYS_FILE, 'utf-8');
+    const encryptedData = await fs.readFile(USER_API_KEYS_FILE, 'utf-8');
     if (!encryptedData) {
       return createEmptyApiKeys();
     }
@@ -300,7 +332,7 @@ safeIpcHandle('save-api-keys', async (event, newApiKeys, password) => {
     const encrypted = encrypt(JSON.stringify(newApiKeys), encryptionPassword);
     
     // Save the encrypted data
-    await fs.writeFile(API_KEYS_FILE, JSON.stringify(encrypted));
+    await fs.writeFile(USER_API_KEYS_FILE, JSON.stringify(encrypted));
     return { status: 'success' };
   } catch (error) {
     console.error('Error saving API keys:', error);
@@ -311,7 +343,7 @@ safeIpcHandle('save-api-keys', async (event, newApiKeys, password) => {
 // Load Selected Model
 safeIpcHandle('load-selected-model', async () => {
   try {
-    const data = await fs.readFile(SELECTED_MODEL_FILE, 'utf-8');
+    const data = await fs.readFile(USER_SELECTED_MODEL_FILE, 'utf-8');
     return JSON.parse(data).selectedModel;
   } catch (error) {
     console.error('Error loading selected model:', error);
@@ -322,7 +354,7 @@ safeIpcHandle('load-selected-model', async () => {
 // Save Selected Model
 safeIpcHandle('save-selected-model', async (event, selectedModel) => {
   try {
-    await fs.writeFile(SELECTED_MODEL_FILE, JSON.stringify({ selectedModel }));
+    await fs.writeFile(USER_SELECTED_MODEL_FILE, JSON.stringify({ selectedModel }));
     return { status: 'success' };
   } catch (error) {
     console.error('Error saving selected model:', error);
