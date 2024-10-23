@@ -245,10 +245,45 @@ safeIpcHandle('save-chat-history', async (event, messages) => {
 safeIpcHandle('load-config', async () => {
   try {
     const data = await fs.readFile(USER_CONFIG_FILE, 'utf-8');
-    return JSON.parse(data);
+    const config = JSON.parse(data);
+    // Ensure the config has the required structure
+    return {
+      context_window_size: config.context_window_size || 10,
+      providers: {
+        openai: {
+          models: config.providers?.openai?.models || ['gpt-4', 'gpt-3.5-turbo'],
+        },
+        anthropic: {
+          models: config.providers?.anthropic?.models || ['claude-3-opus', 'claude-3-sonnet', 'claude-3-haiku'],
+        },
+        groq: {
+          models: config.providers?.groq?.models || ['mixtral-8x7b-32768', 'llama2-70b-4096'],
+        },
+        local: {
+          models: config.providers?.local?.models || ['llama2', 'mistral'],
+          serverAddress: config.providers?.local?.serverAddress || 'http://localhost:11434/api/chat',
+        },
+        google: {
+          models: config.providers?.google?.models || ['gemini-1.5-pro', 'gemini-1.5-ultra'],
+        }
+      }
+    };
   } catch (error) {
     console.error('Error loading config:', error);
-    return { context_window_size: 10 };
+    // Return default config if file doesn't exist or is invalid
+    return {
+      context_window_size: 10,
+      providers: {
+        openai: { models: ['gpt-4', 'gpt-3.5-turbo'] },
+        anthropic: { models: ['claude-3-opus', 'claude-3-sonnet', 'claude-3-haiku'] },
+        groq: { models: ['mixtral-8x7b-32768', 'llama2-70b-4096'] },
+        local: { 
+          models: ['llama2', 'mistral'],
+          serverAddress: 'http://localhost:11434/api/chat'
+        },
+        google: { models: ['gemini-1.5-pro', 'gemini-1.5-ultra'] }
+      }
+    };
   }
 });
 
@@ -657,4 +692,3 @@ ipcMain.on('close-options-modal', (event) => {
     win.webContents.send('close-options-modal');
   }
 });
-
