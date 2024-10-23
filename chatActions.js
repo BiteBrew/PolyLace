@@ -4,7 +4,7 @@ import {
   streamingContent, currentStreamingMessage, lastDisplayedContent, 
   apiKeys, updateMessages, updateStreamingContent, 
   updateCurrentStreamingMessage, updateLastDisplayedContent,
-  scrollToBottom, autoResizeTextarea
+  scrollToBottom, autoResizeTextarea, systemPrompt
 } from './renderer.js';
 import { loadApiKeys, loadConfig } from './dataLoader.js';
 import { displayMessage, updateMessageContent, displayError, addCopyIconToMessage } from './chatRenderer.js';
@@ -30,34 +30,41 @@ export async function sendMessage() {
   updateStreamingContent(''); // Clear previous streaming content
 
   const userMessage = { role: 'user', content: userInput };
-  messages.push(userMessage);
+  
+  // Create a new array with system prompt and user messages
+  const contextMessages = [
+    { role: 'system', content: systemPrompt }, // Add system prompt as first message
+    ...messages, // Add existing conversation history
+    userMessage // Add new user message
+  ];
+
+  messages.push(userMessage); // Update visible messages
   displayMessage('You', userInput);
   await ipcRenderer.invoke('save-chat-history', messages);
 
-  const selectedModel = modelSelector.value; // Format: Provider:ModelName
+  const selectedModel = modelSelector.value;
   const [provider, model] = selectedModel.split(':');
 
   try {
     // Display an empty AI message to be updated
     updateCurrentStreamingMessage(await displayMessage('AI', ''));
 
-    // Initiate streaming based on provider
+    // Pass contextMessages instead of messages to include system prompt
     if (provider === 'local') {
       const serverAddress = apiKeys.local.serverAddress;
-      await ipcRenderer.invoke('stream-local', serverAddress, model, messages);
+      await ipcRenderer.invoke('stream-local', serverAddress, model, contextMessages);
     } else if (provider === 'openai') {
-      await ipcRenderer.invoke('stream-openai', model, messages);
+      await ipcRenderer.invoke('stream-openai', model, contextMessages);
     } else if (provider === 'anthropic') {
-      await ipcRenderer.invoke('stream-anthropic', model, messages);
+      await ipcRenderer.invoke('stream-anthropic', model, contextMessages);
     } else if (provider === 'groq') {
-      await ipcRenderer.invoke('stream-groq', model, messages);
+      await ipcRenderer.invoke('stream-groq', model, contextMessages);
     } else if (provider === 'google') {
-      await ipcRenderer.invoke('stream-google', model, messages);
+      await ipcRenderer.invoke('stream-google', model, contextMessages);
     } else {
       throw new Error(`Unknown provider: ${provider}`);
     }
 
-    // The actual AI response will be handled via stream listeners
   } catch (error) {
     console.error('Error in sendMessage:', error);
     displayError('System', `Error: ${error.message}`);

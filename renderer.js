@@ -18,7 +18,7 @@ marked.setOptions({
 let apiKeys = {};
 let messages = [];
 let config = {};
-let systemPrompt = '';
+let systemPrompt = '';  // Initialize as empty string
 let selectedModel = 'openai:gpt-3.5-turbo'; // Default model
 let streamingContent = '';
 let currentStreamingMessage = null;
@@ -137,7 +137,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   messages = await loadChatHistory();
   config = await loadConfig();
   console.log('Loaded config:', config); // Add this line to debug
-  systemPrompt = await loadSystemPrompt();
+  // Load the system prompt
+  try {
+    systemPrompt = await loadSystemPrompt();
+    console.log('System prompt loaded:', systemPrompt);
+  } catch (error) {
+    console.error('Error loading system prompt:', error);
+    systemPrompt = 'You are a helpful AI assistant.'; // Default fallback
+  }
   selectedModel = await loadSelectedModel();
   await populateModelSelector();
   renderChat();
