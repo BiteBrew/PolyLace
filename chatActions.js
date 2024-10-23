@@ -6,7 +6,7 @@ import {
   updateCurrentStreamingMessage, updateLastDisplayedContent,
   scrollToBottom, autoResizeTextarea
 } from './renderer.js';
-import { loadApiKeys } from './dataLoader.js';
+import { loadApiKeys, loadConfig } from './dataLoader.js';
 import { displayMessage, updateMessageContent, displayError, addCopyIconToMessage } from './chatRenderer.js';
 import { handleStreamingResponse } from './streamHandler.js';
 import { populateModelSelector } from './uiUpdater.js';
@@ -92,24 +92,19 @@ export async function handleOptionsSubmit(e) {
 
   const newApiKeys = {
     openai: {
-      apiKey: document.getElementById('openai-api-key').value.trim(),
-      models: document.getElementById('openai-models').value.split(',').map(m => m.trim())
+      apiKey: document.getElementById('openai-api-key').value.trim()
     },
     anthropic: {
-      apiKey: document.getElementById('anthropic-api-key').value.trim(),
-      models: document.getElementById('anthropic-models').value.split(',').map(m => m.trim())
+      apiKey: document.getElementById('anthropic-api-key').value.trim()
     },
     groq: {
-      apiKey: document.getElementById('groq-api-key').value.trim(),
-      models: document.getElementById('groq-models').value.split(',').map(m => m.trim())
+      apiKey: document.getElementById('groq-api-key').value.trim()
     },
     local: {
-      serverAddress: document.getElementById('local-server-address').value.trim(),
-      models: document.getElementById('local-models').value.split(',').map(m => m.trim())
+      serverAddress: document.getElementById('local-server-address').value.trim()
     },
     google: {
-      apiKey: document.getElementById('google-api-key').value.trim(),
-      models: document.getElementById('google-models').value.split(',').map(m => m.trim())
+      apiKey: document.getElementById('google-api-key').value.trim()
     }
   };
 
@@ -117,25 +112,17 @@ export async function handleOptionsSubmit(e) {
 
   try {
     const result = await ipcRenderer.invoke('save-api-keys', newApiKeys);
-    console.log('Save API keys result:', result);
     if (result.status === 'success') {
       console.log('API keys saved successfully');
       // Update the apiKeys in renderer.js
       Object.assign(apiKeys, newApiKeys);
-      // Optionally, you can add a visual confirmation here
     } else {
       console.error('Failed to save API keys:', result.message);
-      // Optionally, show an error message to the user
     }
   } catch (error) {
     console.error('Error saving API keys:', error);
-    // Optionally, show an error message to the user
   }
 
-  // Re-populate the model selector with updated models
-  await populateModelSelector();
-
-  // Emit an event to close the modal
   ipcRenderer.send('close-options-modal');
 }
 
@@ -155,17 +142,38 @@ export async function updateDisplayIfNeeded() {
 }
 
 export async function finalizeMessage() {
-  console.log('Finalizing message');
-  if (currentStreamingMessage) {
-    await updateMessageContent(currentStreamingMessage, streamingContent);
+  console.log('Finalizing message with streaming content:', streamingContent);
+  try {
+    if (!currentStreamingMessage) {
+      console.warn('No current streaming message to finalize');
+      return;
+    }
+
+    // Ensure we have the actual DOM element
+    const messageElement = await currentStreamingMessage;
+    if (!messageElement) {
+      console.warn('Message element not found during finalization');
+      return;
+    }
+
+    // Update the message content
+    await updateMessageContent(messageElement, streamingContent);
+    
+    // Add the message to history
     const aiMessage = { role: 'assistant', content: String(streamingContent).trim() };
     updateMessages([...messages, aiMessage]);
     await ipcRenderer.invoke('save-chat-history', messages);
     
-    // Add the copy icon after the message is complete
-    addCopyIconToMessage(await currentStreamingMessage, streamingContent);
+    // Add the copy icon
+    console.log('Adding copy icon to message element');
+    addCopyIconToMessage(messageElement, streamingContent);
+    
+  } catch (error) {
+    console.error('Error in finalizeMessage:', error);
+  } finally {
+    console.log('Resetting streaming state');
+    resetStreamingState();
   }
-  resetStreamingState();
 }
 
 export function resetStreamingState() {
@@ -178,30 +186,28 @@ export function resetStreamingState() {
 }
 
 export async function populateOptionsForm() {
-  console.log('Populating options form');
   try {
+    // Load both API keys and config
     const currentApiKeys = await loadApiKeys();
-    console.log('Loaded API keys:', currentApiKeys);
+    const config = await loadConfig();
     
-    document.getElementById('openai-api-key').value = currentApiKeys.openai.apiKey || '';
-    document.getElementById('openai-models').value = currentApiKeys.openai.models.join(', ');
+    // Populate API keys
+    document.getElementById('openai-api-key').value = currentApiKeys.openai?.apiKey || '';
+    document.getElementById('anthropic-api-key').value = currentApiKeys.anthropic?.apiKey || '';
+    document.getElementById('groq-api-key').value = currentApiKeys.groq?.apiKey || '';
+    document.getElementById('local-server-address').value = currentApiKeys.local?.serverAddress || '';
+    document.getElementById('google-api-key').value = currentApiKeys.google?.apiKey || '';
     
-    document.getElementById('anthropic-api-key').value = currentApiKeys.anthropic.apiKey || '';
-    document.getElementById('anthropic-models').value = currentApiKeys.anthropic.models.join(', ');
+    // Populate models from config
+    document.getElementById('openai-models').value = config.providers.openai.models.join(', ');
+    document.getElementById('anthropic-models').value = config.providers.anthropic.models.join(', ');
+    document.getElementById('groq-models').value = config.providers.groq.models.join(', ');
+    document.getElementById('local-models').value = config.providers.local.models.join(', ');
+    document.getElementById('google-models').value = config.providers.google.models.join(', ');
     
-    document.getElementById('groq-api-key').value = currentApiKeys.groq.apiKey || '';
-    document.getElementById('groq-models').value = currentApiKeys.groq.models.join(', ');
-    
-    document.getElementById('local-server-address').value = currentApiKeys.local.serverAddress || '';
-    document.getElementById('local-models').value = currentApiKeys.local.models.join(', ');
-    
-    document.getElementById('google-api-key').value = currentApiKeys.google.apiKey || '';
-    document.getElementById('google-models').value = currentApiKeys.google.models.join(', ');
-    
-    console.log('Options form populated successfully');
   } catch (error) {
     console.error('Error populating options form:', error);
-    throw error; // Rethrow the error to be caught in the event listener
+    throw error;
   }
 }
 

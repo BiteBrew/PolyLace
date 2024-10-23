@@ -18,8 +18,8 @@
   "license": "GNU GENERAL PUBLIC LICENSE",
   "devDependencies": {
     "@types/marked": "^5.0.2",
-    "electron-builder": "^25.0.5",
-    "electron": "^32.1.2"
+    "electron": "^32.2.1",
+    "electron-builder": "^25.0.5"
   },
   "dependencies": {
     "@google/generative-ai": "^0.1.3",

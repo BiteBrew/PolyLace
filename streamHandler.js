@@ -1,10 +1,39 @@
 // streamHandler.js
-import { updateDisplayIfNeeded, finalizeMessage, resetStreamingState } from './chatActions.js';
-import { updateStreamingContent, groqBuffer, updateGroqBuffer } from './renderer.js';
-import { displayError } from './chatRenderer.js';
+import { updateStreamingContent, streamingContent, currentStreamingMessage, messages, updateMessages } from './renderer.js';
+import { updateMessageContent, addCopyIconToMessage, displayError } from './chatRenderer.js';
+import { finalizeMessage, resetStreamingState, updateDisplayIfNeeded } from './chatActions.js';
+import electron from './electronBridge.js';
+const { ipcRenderer } = electron;
+
 export async function handleStreamingResponse(sender, chunk, provider) {
   console.log(`Handling streaming response from ${provider}:`, chunk);
   try {
+    // Special handling for Google's stream completion
+    if (provider === 'google' && chunk === '[DONE]') {
+      console.log('Google stream completed');
+      // Store the final content before resetting
+      const finalContent = streamingContent;
+      const finalMessage = currentStreamingMessage;
+      
+      // Ensure we have content and a message element
+      if (finalContent && finalMessage) {
+        const messageElement = await finalMessage;
+        if (messageElement) {
+          await updateMessageContent(messageElement, finalContent);
+          const aiMessage = { role: 'assistant', content: String(finalContent).trim() };
+          updateMessages([...messages, aiMessage]);
+          await ipcRenderer.invoke('save-chat-history', messages);
+          
+          console.log('Adding copy icon to Google response');
+          addCopyIconToMessage(messageElement, finalContent);
+        }
+      }
+      
+      // Reset state after everything is done
+      resetStreamingState();
+      return;
+    }
+
     const { newContent, isDone } = processChunk(chunk, provider);
 
     if (newContent) {
@@ -13,7 +42,7 @@ export async function handleStreamingResponse(sender, chunk, provider) {
       await updateDisplayIfNeeded();
     }
 
-    if (isDone) {
+    if (isDone && provider !== 'google') {
       console.log('Stream is done, finalizing message');
       await finalizeMessage();
     }

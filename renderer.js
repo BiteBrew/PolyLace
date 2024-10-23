@@ -1,7 +1,7 @@
 // renderer.js
 import { setupEventListeners } from './eventHandlers.js';
 import { renderChat, displayMessage, updateMessageContent } from './chatRenderer.js';
-import { clearChat } from './chatActions.js';
+import { clearChat, sendMessage } from './chatActions.js';
 import { loadApiKeys, loadChatHistory, loadConfig, loadSystemPrompt, loadSelectedModel } from './dataLoader.js';
 import { handleStreamingResponse } from './streamHandler.js';
 import { populateModelSelector } from './uiUpdater.js';
@@ -35,16 +35,18 @@ const optionsModal = document.getElementById('options-modal');
 const optionsForm = document.getElementById('options-form');
 const closeButton = document.querySelector('.close-button');
 
-// Add auto-resize function
+// Update the autoResizeTextarea function
 function autoResizeTextarea(textarea, reset = false) {
   if (reset) {
     textarea.style.height = 'auto';
-    textarea.style.height = `${textarea.scrollHeight}px`;
+    textarea.style.height = '40px'; // Set to default single line height
+    textarea.value = ''; // Clear the content
     return;
   }
   
   textarea.style.height = 'auto';
-  textarea.style.height = `${textarea.scrollHeight}px`;
+  const computedHeight = Math.min(textarea.scrollHeight, 200); // Max height of 200px
+  textarea.style.height = `${computedHeight}px`;
 }
 
 // Add paste handling function
@@ -53,8 +55,8 @@ function handlePaste(event) {
   const clipboardData = event.clipboardData || window.clipboardData;
   let pastedData = clipboardData.getData('text/plain');
 
-  // Preserve line breaks and indentation
-  pastedData = pastedData.replace(/\n/g, '\n');
+  // Remove extra newlines and trim
+  pastedData = pastedData.replace(/\n+/g, ' ').trim();
 
   // Insert the formatted text at the cursor position
   const textarea = event.target;
@@ -80,6 +82,14 @@ window.handlePaste = handlePaste;
 // Add event listeners for auto-resize and paste handling
 inputField.addEventListener('input', function() {
   autoResizeTextarea(this);
+});
+
+inputField.addEventListener('keydown', function(event) {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault(); // Prevent the newline
+    sendMessage();
+    autoResizeTextarea(this, true); // Reset the textarea
+  }
 });
 
 inputField.addEventListener('paste', handlePaste);
@@ -126,6 +136,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   apiKeys = await loadApiKeys();
   messages = await loadChatHistory();
   config = await loadConfig();
+  console.log('Loaded config:', config); // Add this line to debug
   systemPrompt = await loadSystemPrompt();
   selectedModel = await loadSelectedModel();
   await populateModelSelector();

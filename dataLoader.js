@@ -14,24 +14,13 @@ function createDefaultApiKeys() {
 }
 
 // Modify the loadApiKeys function
-export async function loadApiKeys() {
-  console.log('Loading API keys');
+export async function loadApiKeys(password) {
   try {
-    const apiKeys = await ipcRenderer.invoke('load-api-keys');
-    console.log('Loaded API keys:', apiKeys);
-    if (!apiKeys || Object.keys(apiKeys).length === 0) {
-      console.log('No API keys found, creating default keys');
-      const defaultKeys = createDefaultApiKeys();
-      await ipcRenderer.invoke('save-api-keys', defaultKeys);
-      return defaultKeys;
-    }
+    const apiKeys = await ipcRenderer.invoke('load-api-keys', password);
     return apiKeys;
   } catch (error) {
     console.error('Error loading API keys:', error);
-    console.log('Creating default API keys due to error');
-    const defaultKeys = createDefaultApiKeys();
-    await ipcRenderer.invoke('save-api-keys', defaultKeys);
-    return defaultKeys;
+    return createDefaultApiKeys();
   }
 }
 
@@ -45,7 +34,22 @@ export async function loadChatHistory() {
 }
 
 export async function loadConfig() {
-  return await ipcRenderer.invoke('load-config');
+  try {
+    const config = await ipcRenderer.invoke('load-config');
+    return config;
+  } catch (error) {
+    console.error('Error loading config:', error);
+    return {
+      context_window_size: 10,
+      providers: {
+        openai: { models: [] },
+        anthropic: { models: [] },
+        groq: { models: [] },
+        local: { models: [], serverAddress: '' },
+        google: { models: [] }
+      }
+    };
+  }
 }
 
 export async function loadSystemPrompt() {
@@ -91,5 +95,16 @@ export async function populateOptionsForm() {
   } catch (error) {
     console.error('Error populating options form:', error);
     // Handle the error, perhaps by showing a message to the user
+  }
+}
+
+// Add saveApiKeys function
+export async function saveApiKeys(apiKeys, password) {
+  try {
+    await ipcRenderer.invoke('save-api-keys', apiKeys, password);
+    return true;
+  } catch (error) {
+    console.error('Error saving API keys:', error);
+    return false;
   }
 }
