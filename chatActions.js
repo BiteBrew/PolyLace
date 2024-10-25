@@ -276,11 +276,3 @@ export function setupEventListeners() {
     console.error('inputField is not available');
   }
 }
-
-// Export functions
-
-
-
-
-
-
