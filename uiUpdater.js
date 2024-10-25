@@ -1,52 +1,61 @@
 // uiUpdater.js
-import { modelSelector, selectedModel, config } from './renderer.js'; // Import config instead of apiKeys
+import { modelSelector, config } from './renderer.js';
 
 export async function populateModelSelector() {
+  if (!modelSelector) {
+    console.error('Model selector element not found');
+    return;
+  }
+
+  // Clear existing options
+  modelSelector.innerHTML = '';
+
+  // Check if config and providers exist
+  if (!config || !config.providers) {
+    console.error('Config or providers not initialized:', config);
+    // Add a default option
+    const option = document.createElement('option');
+    option.value = 'openai:gpt-3.5-turbo';
+    option.textContent = 'OpenAI - GPT-3.5 Turbo';
+    modelSelector.appendChild(option);
+    return;
+  }
+
   try {
-    modelSelector.innerHTML = ''; // Clear existing options
-    
-    // Use config.providers instead of apiKeys
+    // Iterate over each provider in the config and add their models
     for (const [provider, providerConfig] of Object.entries(config.providers)) {
-      if (provider === 'local') continue; // Handle local differently if needed
-      
-      if (providerConfig.models && providerConfig.models.length > 0) {
-        const optgroup = document.createElement('optgroup');
-        optgroup.label = provider.charAt(0).toUpperCase() + provider.slice(1);
-        
-        for (const model of providerConfig.models) {
+      if (providerConfig && Array.isArray(providerConfig.models)) {
+        providerConfig.models.forEach(model => {
           const option = document.createElement('option');
           option.value = `${provider}:${model}`;
-          option.textContent = model;
-          optgroup.appendChild(option);
-        }
-        
-        modelSelector.appendChild(optgroup);
+          option.textContent = `${provider} - ${model}`;
+          modelSelector.appendChild(option);
+        });
       }
     }
 
-    // Handle local models separately
-    const localConfig = config.providers.local;
-    if (localConfig && localConfig.models && localConfig.models.length > 0) {
-      const optgroup = document.createElement('optgroup');
-      optgroup.label = 'Local';
-
-      for (const model of localConfig.models) {
-        const option = document.createElement('option');
-        option.value = `local:${model}`;
-        option.textContent = model;
-        optgroup.appendChild(option);
-      }
-      
-      modelSelector.appendChild(optgroup);
+    // If no options were added, add a default option
+    if (modelSelector.options.length === 0) {
+      const option = document.createElement('option');
+      option.value = 'openai:gpt-3.5-turbo';
+      option.textContent = 'OpenAI - GPT-3.5 Turbo';
+      modelSelector.appendChild(option);
     }
-
-    // Set the selected model
-    if (selectedModel) {
-      modelSelector.value = selectedModel;
-    }
-    
-    console.log('Model selector populated with options:', modelSelector.innerHTML);
   } catch (error) {
     console.error('Error populating model selector:', error);
+    // Add a default option in case of error
+    const option = document.createElement('option');
+    option.value = 'openai:gpt-3.5-turbo';
+    option.textContent = 'OpenAI - GPT-3.5 Turbo';
+    modelSelector.appendChild(option);
+  }
+
+  // Optionally, set the selected model to the previously selected one
+  // This assumes you have a `selectedModel` variable exported from renderer.js
+  const selectedModelOption = modelSelector.querySelector(`option[value="${config.selectedModel}"]`);
+  if (selectedModelOption) {
+    modelSelector.value = selectedModelOption.value;
+  } else if (modelSelector.options.length > 0) {
+    modelSelector.value = modelSelector.options[0].value; // Set to first option if previous selection not found
   }
 }
