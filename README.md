@@ -9,10 +9,10 @@ PolyLace is a cross-platform Electron-based application designed to weave conver
 - [Getting Started with Local Models](#getting-started-with-local-models)
 - [Usage](#usage)
 - [Configuration](#configuration)
+- [Key Components](#key-components)
 - [Current Features](#current-features)
 - [Areas for Improvement](#areas-for-improvement)
-- [Conclusion](#conclusion)      
-- [Key Components](#key-components)    
+- [Conclusion](#conclusion)
 
 ## Features
 
@@ -70,53 +70,38 @@ PolyLace is a cross-platform Electron-based application designed to weave conver
    ```bash
    npm run build:linux
    ```
-*note you can only build for mac on a mac os system. You can build for windows and linux on any system with the correct dependencies.
 
-### Getting Started with Local Models
+   *Note: You can only build for macOS on a macOS system. You can build for Windows and Linux on any system with the correct dependencies.*
+
+## Getting Started with Local Models
 
 To get started with local models, follow these steps:
 
 1. **Install Ollama**:
    - Download and install Ollama from [ollama.com](https://ollama.com/).
 
+2. **Install Default Models**:
 
-To install the default models run the following commands in your terminal:
+   ```bash
+   ollama pull llama3.2
+   ollama pull llama3.2:1b
+   ```
 
-```bash
-ollama pull llama3.2
-ollama pull llama3.2:1b
-```
-Other installable models can be found [here](https://ollama.com/library).
+   Other installable models can be found [here](https://ollama.com/library).
 
-To start the ollama server run the following command in your terminal usually this will already be running in the background:
+3. **Start the Ollama Server**:
 
-```bash
-ollama serve
-```
-To list the models currently available on your PC run the following command:
+   ```bash
+   ollama serve
+   ```
 
-```bash
-ollama list
-```   
-Make sure to add those exact names, separated by commas, in the PolyLace settings to make them avalable in PolyLace.
+   To list the models currently available on your PC run the following command:
 
-### Getting API Keys and Model Names
+   ```bash
+   ollama list
+   ```
 
-Get an OpenAI API key (paid plan required) [here](https://platform.openai.com/account/api-keys).
-
-See their available models [here](https://platform.openai.com/docs/models).
-
-Get an Anthropic API key (paid plan required) [here](https://www.anthropic.com/product).
-
-See their available models [here](https://docs.anthropic.com/claude-3-opus/reference/Claude-3-Opus-Models).
-
-Get an Groq API key (free key available) [here](https://console.groq.com/keys).
-
-See their available models [here](https://console.groq.com/docs/models).
-
-Get a Google API key (free key available) [here](https://console.cloud.google.com/apis/credentials).
-
-See their available models [here](https://ai.google.dev/gemini-api/docs/models/gemini).
+   Make sure to add those exact names, separated by commas, in the PolyLace settings to make them available in PolyLace.
 
 ## Usage
 
@@ -126,7 +111,7 @@ See their available models [here](https://ai.google.dev/gemini-api/docs/models/g
    - Use the dropdown menu at the top to choose from available AI models across different providers.
 
 2. **Type Your Message:**
-   - Enter your message in the input field at the bottom and press Enter or click the send button. Change models at any time without losing any conversation context. For example you can use any onlie model to answer a question and then switch to a local model to summarize or translate the conversation. Local models can also be used without an internet connection and maintain privacy by not sending requests to the internet. Do remember the entire context is sent with each request.
+   - Enter your message in the input field at the bottom and press Enter or click the send button. Change models at any time without losing any conversation context. For example, you can use any online model to answer a question and then switch to a local model to summarize or translate the conversation. Local models can also be used without an internet connection and maintain privacy by not sending requests to the internet. Remember, the entire context is sent with each request.
 
 3. **Manage Conversations:**
    - Use the "Clear Conversation" button to reset the chat history.
@@ -153,7 +138,7 @@ PolyLace uses a combination of JSON and YAML configuration files to manage setti
 ### Key Configuration Files
 
 - **config.json:**
-  
+
   ```json
   {
     "context_window_size": 25
@@ -161,7 +146,7 @@ PolyLace uses a combination of JSON and YAML configuration files to manage setti
   ```
 
 - **api_keys.json:**
-  
+
   ```json
   {
     "openai": {
@@ -174,7 +159,7 @@ PolyLace uses a combination of JSON and YAML configuration files to manage setti
     },
     "groq": {
       "apiKey": "",
-      "models": ["gemma2-9b-it, llama-3.2-11b-vision-preview, mixtral-8x7b-32768"]
+      "models": ["gemma2-9b-it", "llama-3.2-11b-vision-preview", "mixtral-8x7b-32768"]
     },
     "local": {
       "serverAddress": "http://localhost:11434/api/chat",
@@ -187,7 +172,7 @@ PolyLace uses a combination of JSON and YAML configuration files to manage setti
 
 Customize the AI's persona by editing the `system_prompt.txt` file located in the `data` directory.
 
-### Key Components
+## Key Components
 
 1. **Main Application Logic (`main.js`)**:
    - Initializes the Electron app and creates the main browser window.
@@ -214,20 +199,23 @@ Customize the AI's persona by editing the `system_prompt.txt` file located in th
 7. **Error Handling**:
    - The codebase includes error handling mechanisms to log errors and display user-friendly messages when issues arise during chat rendering or data loading.
 
-### Current Features
+## Current Features
+
 - **Multi-Model Support**: Users can interact with various AI models.
 - **Chat History Management**: Save and load previous conversations.
 - **API Key Management**: Securely manage API keys for different AI providers.
 - **Customizable System Prompts**: Tailor the AI's behavior with custom prompts.
 - **User-Friendly Interface**: Intuitive design with modern UI elements.
 
-### Areas for Improvement
+## Areas for Improvement
+
 - **Testing**: Implement unit tests and integration tests to ensure the reliability of the application.
 - **Error Handling**: Enhance error handling to provide more detailed feedback to users.
 - **Performance Optimization**: Review and optimize the rendering logic for better performance, especially with large chat histories.
 - **Documentation**: Improve inline documentation and user guides to assist developers and users in understanding the codebase and application usage.
 
-### Conclusion
+## Conclusion
+
 The PolyLace application is well-structured and functional, providing a solid foundation for multi-model AI interactions. With further enhancements in testing, error handling, and documentation, it can become a robust tool for users looking to leverage various AI models in a unified interface.
 
 ![PolyLace Logo](assets/PolyLace.png)
