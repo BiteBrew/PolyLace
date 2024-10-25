@@ -12,7 +12,12 @@ export async function renderChat() {
       if (message.role === 'system') continue;
       
       const content = await resolveContent(message.content);
-      await displayMessage(message.role === 'user' ? 'You' : 'AI', content);
+      const messageElement = await displayMessage(message.role === 'user' ? 'You' : 'AI', content);
+      
+      // Add copy icon for AI messages when rendering from history
+      if (message.role === 'assistant') {
+        addCopyIconToMessage(messageElement, content);
+      }
     }
   } catch (error) {
     console.error('Error rendering chat:', error);
@@ -146,7 +151,13 @@ export function addCopyIconToMessage(messageElement, content) {
 
   try {
     console.log('Adding copy icon to message with classes:', messageElement.classList.toString());
-    if (messageElement.classList.contains('ai-message') && !messageElement.querySelector('.copy-icon-wrapper')) {
+    // Remove existing copy icon if it exists
+    const existingIcon = messageElement.querySelector('.copy-icon-wrapper');
+    if (existingIcon) {
+      existingIcon.remove();
+    }
+
+    if (messageElement.classList.contains('ai-message')) {
       const copyIconWrapper = document.createElement('div');
       copyIconWrapper.className = 'copy-icon-wrapper';
       
@@ -160,7 +171,7 @@ export function addCopyIconToMessage(messageElement, content) {
       messageElement.appendChild(copyIconWrapper);
       console.log('Copy icon added successfully');
     } else {
-      console.log('Message either already has copy icon or is not AI message');
+      console.log('Message is not AI message');
     }
   } catch (error) {
     console.error('Error adding copy icon to message:', error);

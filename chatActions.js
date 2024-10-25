@@ -2,7 +2,7 @@
 import { 
   inputField, modelSelector, chatDisplay, messages,
   streamingContent, currentStreamingMessage, lastDisplayedContent, 
-  apiKeys, updateMessages, updateStreamingContent, 
+  apiKeys, config, updateMessages, updateStreamingContent, 
   updateCurrentStreamingMessage, updateLastDisplayedContent,
   scrollToBottom, autoResizeTextarea, systemPrompt
 } from './renderer.js';
@@ -11,6 +11,7 @@ import { displayMessage, updateMessageContent, displayError, addCopyIconToMessag
 import { handleStreamingResponse } from './streamHandler.js';
 import { populateModelSelector } from './uiUpdater.js';
 import electron from './electronBridge.js';
+import { ENCRYPTION_PASSWORD } from './constants.js'; // Adjust the path as necessary
 const { ipcRenderer } = electron;
 
 export async function sendMessage() {
@@ -118,7 +119,7 @@ export async function handleOptionsSubmit(e) {
   console.log('Saving API keys:', JSON.stringify(newApiKeys, null, 2));
 
   try {
-    const result = await ipcRenderer.invoke('save-api-keys', newApiKeys);
+    const result = await ipcRenderer.invoke('save-api-keys', newApiKeys, ENCRYPTION_PASSWORD);
     if (result.status === 'success') {
       console.log('API keys saved successfully');
       // Update the apiKeys in renderer.js
@@ -128,6 +129,46 @@ export async function handleOptionsSubmit(e) {
     }
   } catch (error) {
     console.error('Error saving API keys:', error);
+  }
+
+  // Now collect the models from the options form and save to config.json
+  const newConfig = {
+    context_window_size: 10, // Or retrieve this value from the form if available
+    providers: {
+      openai: {
+        models: document.getElementById('openai-models').value.split(',').map(s => s.trim())
+      },
+      anthropic: {
+        models: document.getElementById('anthropic-models').value.split(',').map(s => s.trim())
+      },
+      groq: {
+        models: document.getElementById('groq-models').value.split(',').map(s => s.trim())
+      },
+      local: {
+        models: document.getElementById('local-models').value.split(',').map(s => s.trim()),
+        serverAddress: newApiKeys.local.serverAddress // Ensure serverAddress is included
+      },
+      google: {
+        models: document.getElementById('google-models').value.split(',').map(s => s.trim())
+      }
+    }
+  };
+
+  console.log('Saving config:', JSON.stringify(newConfig, null, 2));
+
+  try {
+    const result = await ipcRenderer.invoke('save-config', newConfig);
+    if (result.status === 'success') {
+      console.log('Config saved successfully');
+      // Update the config in renderer.js without reassigning
+      Object.assign(config, newConfig);
+      // Refresh the model selector to reflect new models
+      await populateModelSelector();
+    } else {
+      console.error('Failed to save config:', result.message);
+    }
+  } catch (error) {
+    console.error('Error saving config:', error);
   }
 
   ipcRenderer.send('close-options-modal');
@@ -235,7 +276,3 @@ export function setupEventListeners() {
     console.error('inputField is not available');
   }
 }
-
-// Export functions
-
-

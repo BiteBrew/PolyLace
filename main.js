@@ -29,6 +29,8 @@ const USER_SELECTED_MODEL_FILE = path.join(USER_DATA_DIR, 'selected_model.json')
 
 const ipcHandlers = new Set();
 
+let mainWindow = null; // Declare mainWindow at the top level
+
 function encrypt(text, password) {
   const salt = crypto.randomBytes(16);
   const key = crypto.scryptSync(password, salt, 32);
@@ -154,58 +156,55 @@ async function createDataFiles() {
   }
 }
 
-function createWindow() {
-  const win = new BrowserWindow({
-    width: 800,
-    height: 600,
+async function createWindow() {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+    return;
+  }
+
+  mainWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: false,
-      enableRemoteModule: true
-    },
-    icon: path.join(__dirname, 'assets', 'PolyLace.png')
+      contextIsolation: false
+    }
   });
 
-  win.setMenu(null);
-  win.loadFile('index.html');
-  win.webContents.openDevTools(); // Add this line
+  // mainWindow.webContents.openDevTools();    Developer console 
 
-  // Error listener
-  win.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
-    console.error('Failed to load:', errorCode, errorDescription);
-  });
+  mainWindow.setMenu(null);
 
-  // Open DevTools (optional)
-  win.webContents.openDevTools();
-
-  // Send the initial theme to the renderer
-  win.webContents.on('did-finish-load', () => {
-    win.webContents.send('system-theme-updated', nativeTheme.shouldUseDarkColors ? 'dark' : 'light');
-  });
-
-  // Listen for theme changes
-  nativeTheme.on('updated', () => {
-    win.webContents.send('system-theme-updated', nativeTheme.shouldUseDarkColors ? 'dark' : 'light');
-  });
-
-  // Open links in default browser
-  win.webContents.setWindowOpenHandler(({ url }) => {
-    return { action: 'deny' };
+  await mainWindow.loadFile('index.html');
+  
+  mainWindow.on('closed', () => {
+    mainWindow = null;
   });
 }
 
+// Single initialization point
 app.whenReady().then(async () => {
-  await createDataFiles();
-  createWindow();
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
-  });
+  try {
+    await createDataFiles();
+    await createWindow();
+    
+    // Handle macOS behavior
+    app.on('activate', async () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        await createWindow();
+      }
+    });
+  } catch (error) {
+    console.error('Error during app initialization:', error);
+  }
 });
 
-// Quit when all windows are closed, except on macOS.
+// Handle window-all-closed event
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
 });
 
 /**
@@ -244,46 +243,55 @@ safeIpcHandle('save-chat-history', async (event, messages) => {
 // Load Config
 safeIpcHandle('load-config', async () => {
   try {
-    const data = await fs.readFile(USER_CONFIG_FILE, 'utf-8');
-    const config = JSON.parse(data);
-    // Ensure the config has the required structure
-    return {
-      context_window_size: config.context_window_size || 10,
-      providers: {
-        openai: {
-          models: config.providers?.openai?.models || ['gpt-4', 'gpt-3.5-turbo'],
-        },
-        anthropic: {
-          models: config.providers?.anthropic?.models || ['claude-3-opus', 'claude-3-sonnet', 'claude-3-haiku'],
-        },
-        groq: {
-          models: config.providers?.groq?.models || ['mixtral-8x7b-32768', 'llama2-70b-4096'],
-        },
-        local: {
-          models: config.providers?.local?.models || ['llama2', 'mistral'],
-          serverAddress: config.providers?.local?.serverAddress || 'http://localhost:11434/api/chat',
-        },
-        google: {
-          models: config.providers?.google?.models || ['gemini-1.5-pro', 'gemini-1.5-ultra'],
-        }
+    // First, try to read the user's config
+    try {
+      const userConfigData = await fs.readFile(USER_CONFIG_FILE, 'utf8');
+      console.log('Loaded user config from:', USER_CONFIG_FILE);
+      return JSON.parse(userConfigData);
+    } catch (error) {
+      console.log('Error reading user config:', error);
+      
+      // Try to read the default config from resources
+      try {
+        const defaultConfigData = await fs.readFile(DEFAULT_CONFIG_FILE, 'utf8');
+        console.log('Loading default config from:', DEFAULT_CONFIG_FILE);
+        
+        // Ensure user data directory exists
+        await fs.mkdir(path.dirname(USER_CONFIG_FILE), { recursive: true });
+        
+        // Copy default config to user directory
+        await fs.writeFile(USER_CONFIG_FILE, defaultConfigData, 'utf8');
+        console.log('Copied default config to:', USER_CONFIG_FILE);
+        
+        return JSON.parse(defaultConfigData);
+      } catch (defaultError) {
+        console.error('Error reading default config:', defaultError);
+        // Return a basic config
+        const basicConfig = {
+          context_window_size: 10,
+          providers: {
+            openai: { models: ['gpt-4', 'gpt-3.5-turbo'] },
+            anthropic: { models: ['claude-3-opus', 'claude-3-sonnet', 'claude-3-haiku'] },
+            groq: { models: ['mixtral-8x7b-32768', 'llama2-70b-4096'] },
+            local: { 
+              models: ['llama2', 'mistral'],
+              serverAddress: 'http://localhost:11434/api/chat'
+            },
+            google: { models: ['gemini-1.5-pro', 'gemini-1.5-ultra'] }
+          }
+        };
+        
+        // Save the basic config
+        await fs.mkdir(path.dirname(USER_CONFIG_FILE), { recursive: true });
+        await fs.writeFile(USER_CONFIG_FILE, JSON.stringify(basicConfig, null, 2), 'utf8');
+        console.log('Created basic config at:', USER_CONFIG_FILE);
+        
+        return basicConfig;
       }
-    };
+    }
   } catch (error) {
-    console.error('Error loading config:', error);
-    // Return default config if file doesn't exist or is invalid
-    return {
-      context_window_size: 10,
-      providers: {
-        openai: { models: ['gpt-4', 'gpt-3.5-turbo'] },
-        anthropic: { models: ['claude-3-opus', 'claude-3-sonnet', 'claude-3-haiku'] },
-        groq: { models: ['mixtral-8x7b-32768', 'llama2-70b-4096'] },
-        local: { 
-          models: ['llama2', 'mistral'],
-          serverAddress: 'http://localhost:11434/api/chat'
-        },
-        google: { models: ['gemini-1.5-pro', 'gemini-1.5-ultra'] }
-      }
-    };
+    console.error('Error in load-config handler:', error);
+    throw error;
   }
 });
 
@@ -692,3 +700,70 @@ ipcMain.on('close-options-modal', (event) => {
     win.webContents.send('close-options-modal');
   }
 });
+
+// Function to copy default config if user config doesn't exist
+async function copyDefaultConfig() {
+  try {
+    // Check if user config exists
+    try {
+      await fs.access(USER_CONFIG_FILE);
+      console.log('User config file already exists at:', USER_CONFIG_FILE);
+      return;
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        console.log('User config file does not exist, attempting to copy default...');
+        
+        // Ensure user data directory exists
+        await fs.mkdir(path.dirname(USER_CONFIG_FILE), { recursive: true });
+        
+        try {
+          // Try to read the default config from resources
+          const defaultConfigData = await fs.readFile(DEFAULT_CONFIG_FILE, 'utf8');
+          console.log('Found default config at:', DEFAULT_CONFIG_FILE);
+          
+          // Write to user config location
+          await fs.writeFile(USER_CONFIG_FILE, defaultConfigData, 'utf8');
+          console.log('Successfully copied default config to:', USER_CONFIG_FILE);
+        } catch (defaultError) {
+          console.error('Error reading default config:', defaultError);
+          throw defaultError;
+        }
+      } else {
+        throw error;
+      }
+    }
+  } catch (error) {
+    console.error('Error in copyDefaultConfig:', error);
+    throw error;
+  }
+}
+
+// Update your createDataFiles function to include config copying
+async function createDataFiles() {
+  try {
+    // Ensure user data directory exists
+    await fs.mkdir(USER_DATA_DIR, { recursive: true });
+    console.log('User data directory created at:', USER_DATA_DIR);
+    
+    // Copy default config if needed
+    await copyDefaultConfig();
+    
+    // Handle api_keys.enc creation
+    try {
+      await fs.access(USER_API_KEYS_FILE);
+      console.log('API keys file exists.');
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        const defaultApiKeys = createDefaultApiKeys();
+        const encrypted = encrypt(JSON.stringify(defaultApiKeys), ENCRYPTION_PASSWORD);
+        await fs.writeFile(USER_API_KEYS_FILE, JSON.stringify(encrypted), 'utf8');
+        console.log('Created default API keys file.');
+      }
+    }
+    
+    // ... handle other file creations as needed ...
+  } catch (error) {
+    console.error('Error creating data files:', error);
+  }
+}
+

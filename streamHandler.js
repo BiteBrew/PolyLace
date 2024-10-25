@@ -1,5 +1,13 @@
 // streamHandler.js
-import { updateStreamingContent, streamingContent, currentStreamingMessage, messages, updateMessages } from './renderer.js';
+import { 
+  updateStreamingContent, 
+  streamingContent, 
+  currentStreamingMessage, 
+  messages, 
+  updateMessages,
+  updateGroqBuffer,  // Add this
+  groqBuffer        // Add this
+} from './renderer.js';
 import { updateMessageContent, addCopyIconToMessage, displayError } from './chatRenderer.js';
 import { finalizeMessage, resetStreamingState, updateDisplayIfNeeded } from './chatActions.js';
 import electron from './electronBridge.js';
