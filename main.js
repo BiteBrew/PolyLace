@@ -137,7 +137,7 @@ async function createDataFiles() {
     // Create other user-specific files if they don't exist
     const userFiles = [
       { path: USER_HISTORY_FILE, content: '[]' },
-      { path: USER_SELECTED_MODEL_FILE, content: JSON.stringify({ selectedModel: 'openai:gpt-4o' }) }
+      { path: USER_SELECTED_MODEL_FILE, content: JSON.stringify({ selectedModel: 'openai:gpt-4o-mini' }) }
     ];
 
     for (const file of userFiles) {

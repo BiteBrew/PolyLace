@@ -1,5 +1,7 @@
 // uiUpdater.js
 import { modelSelector, config } from './renderer.js';
+import electron from './electronBridge.js';
+const { ipcRenderer } = electron;
 
 export async function populateModelSelector() {
   if (!modelSelector) {
@@ -10,52 +12,58 @@ export async function populateModelSelector() {
   // Clear existing options
   modelSelector.innerHTML = '';
 
-  // Check if config and providers exist
-  if (!config || !config.providers) {
-    console.error('Config or providers not initialized:', config);
-    // Add a default option
-    const option = document.createElement('option');
-    option.value = 'openai:gpt-3.5-turbo';
-    option.textContent = 'OpenAI - GPT-3.5 Turbo';
-    modelSelector.appendChild(option);
-    return;
-  }
-
   try {
+    // Get the last selected model from storage
+    const lastSelectedModel = await ipcRenderer.invoke('load-selected-model') || 'openai:gpt4o-mini';
+    console.log('Last selected model:', lastSelectedModel);
+
+    let hasSelectedModel = false;
+
     // Iterate over each provider in the config and add their models
     for (const [provider, providerConfig] of Object.entries(config.providers)) {
       if (providerConfig && Array.isArray(providerConfig.models)) {
+        // Add a group for each provider
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = provider.charAt(0).toUpperCase() + provider.slice(1);
+        
         providerConfig.models.forEach(model => {
           const option = document.createElement('option');
-          option.value = `${provider}:${model}`;
-          option.textContent = `${provider} - ${model}`;
-          modelSelector.appendChild(option);
+          const modelValue = `${provider}:${model}`;
+          option.value = modelValue;
+          option.textContent = `${model}`;
+          
+          // Select this option if it matches the last selected model
+          if (modelValue === lastSelectedModel) {
+            option.selected = true;
+            hasSelectedModel = true;
+          }
+          
+          optgroup.appendChild(option);
         });
+        
+        modelSelector.appendChild(optgroup);
       }
     }
 
-    // If no options were added, add a default option
-    if (modelSelector.options.length === 0) {
-      const option = document.createElement('option');
-      option.value = 'openai:gpt-3.5-turbo';
-      option.textContent = 'OpenAI - GPT-3.5 Turbo';
-      modelSelector.appendChild(option);
+    // If no model was selected, select the default
+    if (!hasSelectedModel) {
+      const defaultOption = modelSelector.querySelector('option[value="openai:gpt4o-mini"]');
+      if (defaultOption) {
+        defaultOption.selected = true;
+      }
     }
+
+    // Add change event listener to save selected model
+    modelSelector.addEventListener('change', async (event) => {
+      await ipcRenderer.invoke('save-selected-model', event.target.value);
+    });
+
   } catch (error) {
     console.error('Error populating model selector:', error);
     // Add a default option in case of error
     const option = document.createElement('option');
-    option.value = 'openai:gpt-3.5-turbo';
-    option.textContent = 'OpenAI - GPT-3.5 Turbo';
+    option.value = 'openai:gpt4o-mini';
+    option.textContent = 'OpenAI - gpt4o-mini';
     modelSelector.appendChild(option);
-  }
-
-  // Optionally, set the selected model to the previously selected one
-  // This assumes you have a `selectedModel` variable exported from renderer.js
-  const selectedModelOption = modelSelector.querySelector(`option[value="${config.selectedModel}"]`);
-  if (selectedModelOption) {
-    modelSelector.value = selectedModelOption.value;
-  } else if (modelSelector.options.length > 0) {
-    modelSelector.value = modelSelector.options[0].value; // Set to first option if previous selection not found
   }
 }

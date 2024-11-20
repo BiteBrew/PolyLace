@@ -19,7 +19,7 @@ let apiKeys = {};
 let messages = [];
 let config = {};
 let systemPrompt = '';  // Initialize as empty string
-let selectedModel = 'openai:gpt-3.5-turbo'; // Default model
+let selectedModel = 'openai:gpt4o-mini'; // Correct default model name
 let streamingContent = '';
 let currentStreamingMessage = null;
 let lastDisplayedContent = '';
@@ -124,32 +124,27 @@ function handleLinkClicks(event) {
 window.addEventListener('DOMContentLoaded', async () => {
   console.log('DOM fully loaded and parsed');
   
-  const optionsButton = document.getElementById('options-button');
-  if (optionsButton) {
-    console.log('Options button found in the DOM');
-  } else {
-    console.error('Options button not found in the DOM');
-  }
-  
   checkChatDisplay();
   await applySystemTheme();
   apiKeys = await loadApiKeys();
   messages = await loadChatHistory();
   config = await loadConfig();
-  console.log('Loaded config:', config); // Add this line to debug
-  // Load the system prompt
-  try {
-    systemPrompt = await loadSystemPrompt();
-    console.log('System prompt loaded:', systemPrompt);
-  } catch (error) {
-    console.error('Error loading system prompt:', error);
-    systemPrompt = 'You are a helpful AI assistant.'; // Default fallback
-  }
+  systemPrompt = await loadSystemPrompt();
+  
+  // Load the selected model before populating the selector
   selectedModel = await loadSelectedModel();
+  console.log('Loaded selected model:', selectedModel);
+  
   await populateModelSelector();
   renderChat();
   setupEventListeners();
-  setupStreamingListeners(); // Add this line
+  setupStreamingListeners();
+
+  // Add event listener for model changes
+  modelSelector.addEventListener('change', async (event) => {
+    selectedModel = event.target.value;
+    await ipcRenderer.invoke('save-selected-model', selectedModel);
+  });
 
   // Add event listener for link clicks
   document.addEventListener('click', handleLinkClicks);

@@ -47,7 +47,7 @@ export async function loadConfig() {
     return {
       context_window_size: 25,
       providers: {
-        openai: { models: ['gpt-4o ', 'gpt-4o-mini'] },
+        openai: { models: ['gpt-4o-mini', 'gpt-4o'] },
         anthropic: { models: ['claude-3-5-sonnet-20241022', 'claude-3-haiku-20240307'] },
         groq: { models: ['llama-3.2-90b-vision-preview', 'llama-3.2-11b-vision-preview', 'gemma2-9b-it', 'mixtral-8x7b-32768'] },
         google: { models: ['gemini-1.5-pro', 'gemini-1.5-flash'] },
@@ -65,7 +65,13 @@ export async function loadSystemPrompt() {
 }
 
 export async function loadSelectedModel() {
-  return await ipcRenderer.invoke('load-selected-model');
+  try {
+    const selectedModel = await ipcRenderer.invoke('load-selected-model');
+    return selectedModel || 'openai:gpt-4o-mini'; // Update default model
+  } catch (error) {
+    console.error('Error loading selected model:', error);
+    return 'openai:gpt-4o-mini'; // Update default model
+  }
 }
 
 export async function saveSelectedModel(model) {

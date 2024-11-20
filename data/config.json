@@ -1,5 +1,5 @@
 {
-    "context_window_size": 25,
+    "context_window_size": 10,
     "providers": {
         "openai": {
             "models": [
@@ -21,18 +21,22 @@
                 "mixtral-8x7b-32768"
             ]
         },
+        "local": {
+            "models": [
+                "llama3.2",
+                "llama3.2:1b",
+                "qwen2.5:32b",
+                "qwen2.5-coder:32b",
+                "qwen2.5:14b",
+                "qwen2.5:7b"
+            ],
+            "serverAddress": "http://localhost:11434/api/chat"
+        },
         "google": {
             "models": [
                 "gemini-1.5-pro",
                 "gemini-1.5-flash"
             ]
-        },
-        "local": {
-            "models": [
-                "llama3.2",
-                "llama3.2:1b"
-            ],
-            "serverAddress": "http://localhost:11434/api/chat"
         }
     }
 }

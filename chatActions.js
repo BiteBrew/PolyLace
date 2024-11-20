@@ -44,7 +44,12 @@ export async function sendMessage() {
   await ipcRenderer.invoke('save-chat-history', messages);
 
   const selectedModel = modelSelector.value;
-  const [provider, model] = selectedModel.split(':');
+  const providerSeparatorIndex = selectedModel.indexOf(':');
+  if (providerSeparatorIndex === -1) {
+    throw new Error(`Invalid selected model format: ${selectedModel}`);
+  }
+  const provider = selectedModel.substring(0, providerSeparatorIndex);
+  const model = selectedModel.substring(providerSeparatorIndex + 1);
 
   try {
     // Display an empty AI message to be updated
